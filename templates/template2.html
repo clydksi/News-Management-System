@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>News Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f7f8fa;
+        }
+        .material-icons {
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+<div class="flex h-screen bg-[#F7F8FA]">
+<aside class="w-64 bg-white flex flex-col fixed h-full shadow-sm">
+<div class="flex items-center justify-center h-20 border-b border-gray-100">
+<span class="material-icons text-3xl text-slate-800">article</span>
+<h1 class="text-2xl font-bold text-slate-800 ml-2">NewsFlow</h1>
+</div>
+<nav class="flex-1 px-4 py-6 space-y-2">
+<a class="flex items-center px-4 py-3 text-slate-800 bg-slate-100 rounded-lg font-semibold" href="#">
+<span class="material-icons mr-3">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center px-4 py-3 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors duration-200 font-medium" href="#">
+<span class="material-icons mr-3">article</span>
+                All News
+            </a>
+<a class="flex items-center px-4 py-3 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors duration-200 font-medium" href="#">
+<span class="material-icons mr-3">category</span>
+                Categories
+            </a>
+<a class="flex items-center px-4 py-3 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors duration-200 font-medium" href="#">
+<span class="material-icons mr-3">chat</span>
+                Community
+            </a>
+<a class="flex items-center px-4 py-3 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors duration-200 font-medium" href="#">
+<span class="material-icons mr-3">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="px-4 py-6 border-t border-gray-100">
+<button class="flex items-center w-full justify-center bg-transparent text-slate-500 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors duration-300 font-medium">
+<span class="material-icons mr-2">logout</span>
+                Logout
+            </button>
+</div>
+</aside>
+<main class="flex-1 ml-64 p-10 overflow-y-auto">
+<header class="flex items-center justify-between mb-10">
+<div>
+<h1 class="text-4xl font-bold text-slate-900">News Dashboard</h1>
+<p class="text-slate-500 mt-2 text-lg">Welcome back, Admin. Manage your news content efficiently.</p>
+</div>
+<div class="flex items-center space-x-4">
+<button class="flex items-center bg-slate-900 text-white px-5 py-3 rounded-xl shadow-sm hover:bg-slate-800 transition-all duration-300 transform hover:-translate-y-0.5 font-semibold">
+<span class="material-icons mr-2">add</span>
+                    Create News
+                </button>
+<button class="flex items-center bg-white text-slate-700 px-5 py-3 rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition-all duration-300 transform hover:-translate-y-0.5 font-semibold">
+<span class="material-icons mr-2">category</span>
+                    Add Category
+                </button>
+</div>
+</header>
+<div class="bg-white p-6 rounded-2xl shadow-sm mb-8 border border-slate-100">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="relative">
+<span class="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-shadow duration-300 text-slate-700 placeholder:text-slate-400" placeholder="Search by title..." type="text"/>
+</div>
+<div>
+<div class="relative">
+<span class="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">calendar_today</span>
+<input class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-shadow duration-300 text-slate-700 placeholder:text-slate-400" placeholder="Start Date" type="date"/>
+</div>
+</div>
+<div>
+<div class="relative">
+<span class="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">calendar_today</span>
+<input class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-shadow duration-300 text-slate-700 placeholder:text-slate-400" placeholder="End Date" type="date"/>
+</div>
+</div>
+<div>
+<div class="relative">
+<span class="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">category</span>
+<select class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl appearance-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-shadow duration-300 text-slate-500">
+<option selected="">All Categories</option>
+<option>Finance</option>
+<option>IT</option>
+<option>Military</option>
+</select>
+<span class="material-icons absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex justify-end mt-6">
+<button class="flex items-center bg-slate-900 text-white px-6 py-2.5 rounded-lg shadow-sm hover:bg-slate-800 transition-all duration-300 font-semibold">
+<span class="material-icons mr-2">filter_alt</span>
+                Apply Filters
+            </button>
+</div>
+</div>
+<nav class="bg-white rounded-2xl shadow-sm p-2 mb-8 flex items-center space-x-2 border border-slate-100">
+<a class="flex-1 text-center py-3 px-4 rounded-lg text-slate-900 bg-slate-100 font-semibold transition-colors duration-300" href="#">
+                All News (4)
+            </a>
+<a class="flex-1 text-center py-3 px-4 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium transition-colors duration-300" href="#">
+                Regular (2)
+            </a>
+<a class="flex-1 text-center py-3 px-4 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium transition-colors duration-300" href="#">
+                Edited (1)
+            </a>
+<a class="flex-1 text-center py-3 px-4 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium transition-colors duration-300" href="#">
+                Headlines (1)
+            </a>
+</nav>
+<section>
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-2xl font-bold text-slate-800">Latest Articles</h2>
+<div class="text-slate-500 text-sm font-medium">
+                    Showing 1 - 4 of 4 articles
+                </div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
+<div class="p-6">
+<div class="flex justify-between items-start mb-4">
+<h3 class="text-xl font-bold text-slate-900 leading-tight">asdasd</h3>
+<span class="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1.5 rounded-full uppercase tracking-wider">Edited</span>
+</div>
+<p class="text-slate-600 text-base mb-5 leading-relaxed line-clamp-3">
+                            Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus dui...
+                        </p>
+<div class="flex items-center flex-wrap gap-2 text-sm">
+<span class="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">sell</span>Finance</span>
+<span class="flex items-center bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">label</span>test</span>
+<span class="flex items-center bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">label</span>cloyd</span>
+</div>
+</div>
+<div class="mt-auto bg-slate-50 p-4 border-t border-slate-100">
+<div class="flex items-center justify-between text-sm text-slate-500 mb-4 px-2">
+<span class="flex items-center font-medium"><span class="material-icons text-base mr-2">calendar_today</span>2025-08-24</span>
+<span class="flex items-center font-medium"><span class="material-icons text-base mr-2">schedule</span>10:41:04</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="flex-1 flex items-center justify-center bg-blue-500 text-white py-2.5 rounded-lg hover:bg-blue-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">edit</span>Edit
+                            </button>
+<button class="flex-1 flex items-center justify-center bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">delete</span>Delete
+                            </button>
+<button class="flex-1 flex items-center justify-center bg-slate-200 text-slate-700 py-2.5 rounded-lg hover:bg-slate-300 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">undo</span>Revert
+                            </button>
+</div>
+</div>
+</div>
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
+<div class="p-6">
+<div class="flex justify-between items-start mb-4">
+<h3 class="text-xl font-bold text-slate-900 leading-tight">testing</h3>
+<span class="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full uppercase tracking-wider">Regular</span>
+</div>
+<p class="text-slate-600 text-base mb-5 leading-relaxed">
+                            testing
+                        </p>
+<div class="flex items-center flex-wrap gap-2 text-sm">
+<span class="flex items-center bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">computer</span>IT</span>
+<span class="flex items-center bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">military_tech</span>Military</span>
+<span class="flex items-center bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">label</span>testuser</span>
+</div>
+</div>
+<div class="mt-auto bg-slate-50 p-4 border-t border-slate-100">
+<div class="flex items-center justify-between text-sm text-slate-500 mb-4 px-2">
+<span class="flex items-center font-medium"><span class="material-icons text-base mr-2">calendar_today</span>2025-08-23</span>
+<span class="flex items-center font-medium"><span class="material-icons text-base mr-2">schedule</span>18:14:49</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="flex-1 flex items-center justify-center bg-blue-500 text-white py-2.5 rounded-lg hover:bg-blue-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">edit</span>Edit
+                            </button>
+<button class="flex-1 flex items-center justify-center bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">delete</span>Delete
+                            </button>
+<button class="flex-1 flex items-center justify-center bg-green-500 text-white py-2.5 rounded-lg hover:bg-green-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">push_pin</span>Headline
+                            </button>
+</div>
+</div>
+</div>
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
+<div class="p-6">
+<div class="flex justify-between items-start mb-4">
+<h3 class="text-xl font-bold text-slate-900 leading-tight">System Development</h3>
+<span class="bg-purple-100 text-purple-700 text-xs font-semibold px-3 py-1.5 rounded-full uppercase tracking-wider">Headline</span>
+</div>
+<p class="text-slate-600 text-base mb-5 leading-relaxed line-clamp-3">
+                            System Development System Development System Development System Development System Development
+                        </p>
+<div class="flex items-center flex-wrap gap-2 text-sm">
+<span class="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">sell</span>Finance</span>
+<span class="flex items-center bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">label</span>test</span>
+<span class="flex items-center bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">label</span>cloyd</span>
+</div>
+</div>
+<div class="mt-auto bg-slate-50 p-4 border-t border-slate-100">
+<div class="flex items-center justify-between text-sm text-slate-500 mb-4 px-2">
+<span class="flex items-center font-medium"><span class="material-icons text-base mr-2">calendar_today</span>2025-08-22</span>
+<span class="flex items-center font-medium"><span class="material-icons text-base mr-2">schedule</span>17:51:48</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="flex-1 flex items-center justify-center bg-blue-500 text-white py-2.5 rounded-lg hover:bg-blue-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">edit</span>Edit
+                            </button>
+<button class="flex-1 flex items-center justify-center bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">delete</span>Delete
+                            </button>
+<button class="flex-1 flex items-center justify-center bg-slate-200 text-slate-700 py-2.5 rounded-lg hover:bg-slate-300 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">edit_note</span>To Edited
+                            </button>
+</div>
+</div>
+</div>
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col">
+<div class="p-6">
+<div class="flex justify-between items-start mb-4">
+<h3 class="text-xl font-bold text-slate-900 leading-tight">Another News Article</h3>
+<span class="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full uppercase tracking-wider">Regular</span>
+</div>
+<p class="text-slate-600 text-base mb-5 leading-relaxed line-clamp-3">
+                            This is a placeholder for another news article to fill the space.
+                        </p>
+<div class="flex items-center flex-wrap gap-2 text-sm">
+<span class="flex items-center bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-medium"><span class="material-icons text-sm mr-1.5">computer</span>IT</span>
+</div>
+</div>
+<div class="mt-auto bg-slate-50 p-4 border-t border-slate-100">
+<div class="flex items-center justify-between text-sm text-slate-500 mb-4 px-2">
+<span class="flex items-center font-medium"><span class="material-icons text-base mr-2">calendar_today</span>2025-08-21</span>
+<span class="flex items-center font-medium"><span class="material-icons text-base mr-2">schedule</span>16:30:00</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="flex-1 flex items-center justify-center bg-blue-500 text-white py-2.5 rounded-lg hover:bg-blue-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">edit</span>Edit
+                            </button>
+<button class="flex-1 flex items-center justify-center bg-red-500 text-white py-2.5 rounded-lg hover:bg-red-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">delete</span>Delete
+                            </button>
+<button class="flex-1 flex items-center justify-center bg-green-500 text-white py-2.5 rounded-lg hover:bg-green-600 transition-colors duration-300 text-sm font-semibold">
+<span class="material-icons text-base mr-1">push_pin</span>Headline
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+
+</body></html>

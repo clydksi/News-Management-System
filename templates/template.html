@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B600%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" onload="this.rel='stylesheet'" rel="stylesheet"/>
+<title>AssetFlow - Media Management Dashboard</title>
+
+<link href="data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.8261 17.4264C16.7203 18.1174 20.2244 18.5217 24 18.5217C27.7756 18.5217 31.2797 18.1174 34.1739 17.4264C36.9144 16.7722 39.9967 15.2331 41.3563 14.1648L24.8486 40.6391C24.4571 41.267 23.5429 41.267 23.1514 40.6391L6.64374 14.1648C8.00331 15.2331 11.0856 16.7722 13.8261 17.4264Z' fill='%230D78F2'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M39.998 12.236C39.9944 12.2537 39.9875 12.2845 39.9748 12.3294C39.9436 12.4399 39.8949 12.5741 39.8346 12.7175C39.8168 12.7597 39.7989 12.8007 39.7813 12.8398C38.5103 13.7113 35.9788 14.9393 33.7095 15.4811C30.9875 16.131 27.6413 16.5217 24 16.5217C20.3587 16.5217 17.0125 16.131 14.2905 15.4811C12.0012 14.9346 9.44505 13.6897 8.18538 12.8168C8.17384 12.7925 8.16216 12.767 8.15052 12.7408C8.09919 12.6249 8.05721 12.5114 8.02977 12.411C8.00356 12.3152 8.00039 12.2667 8.00004 12.2612C8.00004 12.261 8 12.2607 8.00004 12.2612C8.00004 12.2359 8.0104 11.9233 8.68485 11.3686C9.34546 10.8254 10.4222 10.2469 11.9291 9.72276C14.9242 8.68098 19.1919 8 24 8C28.8081 8 33.0758 8.68098 36.0709 9.72276C37.5778 10.2469 38.6545 10.8254 39.3151 11.3686C39.9006 11.8501 39.9857 12.1489 39.998 12.236ZM4.95178 15.2312L21.4543 41.6973C22.6288 43.5809 25.3712 43.5809 26.5457 41.6973L43.0534 15.223C43.0709 15.1948 43.0878 15.1662 43.104 15.1371L41.3563 14.1648C43.104 15.1371 43.1038 15.1374 43.104 15.1371L43.1051 15.135L43.1065 15.1325L43.1101 15.1261L43.1199 15.1082C43.1276 15.094 43.1377 15.0754 43.1497 15.0527C43.1738 15.0075 43.2062 14.9455 43.244 14.8701C43.319 14.7208 43.4196 14.511 43.5217 14.2683C43.6901 13.8679 44 13.0689 44 12.2609C44 10.5573 43.003 9.22254 41.8558 8.2791C40.6947 7.32427 39.1354 6.55361 37.385 5.94477C33.8654 4.72057 29.133 4 24 4C18.867 4 14.1346 4.72057 10.615 5.94478C8.86463 6.55361 7.30529 7.32428 6.14419 8.27911C4.99695 9.22255 3.99999 10.5573 3.99999 12.2609C3.99999 13.1275 4.29264 13.9078 4.49321 14.3607C4.60375 14.6102 4.71348 14.8196 4.79687 14.9689C4.83898 15.0444 4.87547 15.1065 4.9035 15.1529C4.91754 15.1762 4.92954 15.1957 4.93916 15.2111L4.94662 15.223L4.95178 15.2312ZM35.9868 18.996L24 38.22L12.0131 18.996C12.4661 19.1391 12.9179 19.2658 13.3617 19.3718C16.4281 20.1039 20.0901 20.5217 24 20.5217C27.9099 20.5217 31.5719 20.1039 34.6383 19.3718C35.082 19.2658 35.5339 19.1391 35.9868 18.996Z' fill='%230D78F2'/%3E%3C/svg%3E" rel="icon" type="image/svg+xml"/>
+
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style type="text/tailwindcss">
+      :root {
+        --primary-color: #0d78f2;
+        --secondary-color: #f0f2f5;
+        --text-primary: #111418;
+        --text-secondary: #60748a;
+      }
+      body {
+        font-family: "Inter", "Noto Sans", sans-serif;
+      }
+    </style>
+</head>
+<body class="bg-white">
+<div class="flex min-h-screen flex-col overflow-x-hidden">
+<header class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-[var(--text-primary)]">
+<svg class="h-8 w-8 text-[var(--brand-primary)]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.8261 17.4264C16.7203 18.1174 20.2244 18.5217 24 18.5217C27.7756 18.5217 31.2797 18.1174 34.1739 17.4264C36.9144 16.7722 39.9967 15.2331 41.3563 14.1648L24.8486 40.6391C24.4571 41.267 23.5429 41.267 23.1514 40.6391L6.64374 14.1648C8.00331 15.2331 11.0856 16.7722 13.8261 17.4264Z" fill="currentColor"></path>
+<path clip-rule="evenodd" d="M39.998 12.236C39.9944 12.2537 39.9875 12.2845 39.9748 12.3294C39.9436 12.4399 39.8949 12.5741 39.8346 12.7175C39.8168 12.7597 39.7989 12.8007 39.7813 12.8398C38.5103 13.7113 35.9788 14.9393 33.7095 15.4811C30.9875 16.131 27.6413 16.5217 24 16.5217C20.3587 16.5217 17.0125 16.131 14.2905 15.4811C12.0012 14.9346 9.44505 13.6897 8.18538 12.8168C8.17384 12.7925 8.16216 12.767 8.15052 12.7408C8.09919 12.6249 8.05721 12.5114 8.02977 12.411C8.00356 12.3152 8.00039 12.2667 8.00004 12.2612C8.00004 12.261 8 12.2607 8.00004 12.2612C8.00004 12.2359 8.0104 11.9233 8.68485 11.3686C9.34546 10.8254 10.4222 10.2469 11.9291 9.72276C14.9242 8.68098 19.1919 8 24 8C28.8081 8 33.0758 8.68098 36.0709 9.72276C37.5778 10.2469 38.6545 10.8254 39.3151 11.3686C39.9006 11.8501 39.9857 12.1489 39.998 12.236ZM4.95178 15.2312L21.4543 41.6973C22.6288 43.5809 25.3712 43.5809 26.5457 41.6973L43.0534 15.223C43.0709 15.1948 43.0878 15.1662 43.104 15.1371L41.3563 14.1648C43.104 15.1371 43.1038 15.1374 43.104 15.1371L43.1051 15.135L43.1065 15.1325L43.1101 15.1261L43.1199 15.1082C43.1276 15.094 43.1377 15.0754 43.1497 15.0527C43.1738 15.0075 43.2062 14.9455 43.244 14.8701C43.319 14.7208 43.4196 14.511 43.5217 14.2683C43.6901 13.8679 44 13.0689 44 12.2609C44 10.5573 43.003 9.22254 41.8558 8.2791C40.6947 7.32427 39.1354 6.55361 37.385 5.94477C33.8654 4.72057 29.133 4 24 4C18.867 4 14.1346 4.72057 10.615 5.94478C8.86463 6.55361 7.30529 7.32428 6.14419 8.27911C4.99695 9.22255 3.99999 10.5573 3.99999 12.2609C3.99999 13.1275 4.29264 13.9078 4.49321 14.3607C4.60375 14.6102 4.71348 14.8196 4.79687 14.9689C4.83898 15.0444 4.87547 15.1065 4.9035 15.1529C4.91754 15.1762 4.92954 15.1957 4.93916 15.2111L4.94662 15.223L4.95178 15.2312ZM35.9868 18.996L24 38.22L12.0131 18.996C12.4661 19.1391 12.9179 19.2658 13.3617 19.3718C16.4281 20.1039 20.0901 20.5217 24 20.5217C27.9099 20.5217 31.5719 20.1039 34.6383 19.3718C35.082 19.2658 35.5339 19.1391 35.9868 18.996Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+<h1 class="text-xl font-bold"> AssetFlow</h1>
+</div>
+<nav class="hidden items-center gap-4 md:flex">
+<a class="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--primary-color)]" href="#">Home</a>
+<a class="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--primary-color)]" href="#">Projects</a>
+<a class="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--primary-color)]" href="#">Assets</a>
+<a class="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--primary-color)]" href="#">Team</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden md:block">
+<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+<svg class="size-5 text-[var(--text-secondary)]" fill="currentColor" height="24px" viewBox="0 0 256 256" width="24px" xmlns="http://www.w3.org/2000/svg">
+<path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+</svg>
+</div>
+<input class="form-input h-10 w-full max-w-xs rounded-md border-0 bg-[var(--secondary-color)] pl-10 pr-4 text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:ring-2 focus:ring-[var(--primary-color)]" placeholder="Search" type="search"/>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full bg-[var(--secondary-color)] text-[var(--text-primary)] hover:bg-gray-200">
+<svg class="size-5" fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
+<path d="M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"></path>
+</svg>
+</button>
+<img alt="User avatar" class="size-10 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaQ8KdFNaXtz7tSgxnimxsTrd-7HnW33OTTo6pwGvZtB0LYL0vPcEEg6awdatxJwmi0ALlXWhRPSEdgVO-X5GLZouWNp6OASrvULByEc5l7FxzIJv1WD9K1UFyO2k-jsVy5l0WNVrjYtoySqfeRTEfdvbaLblUB_dJt5bpNDrplksaP1SeGUkfwIH1VFUHPNvip1HvzaJyc1DfxSHTq0hbNds_nhuWYRBLp2K1WQeQFC_DJ7nTJBUX24afhFfh9UEDEjKU8T4s_EYf"/>
+</div>
+</header>
+<div class="flex flex-1">
+<aside class="w-72 border-r border-gray-200 p-6">
+<h2 class="text-xl font-bold text-[var(--text-primary)]">Filters</h2>
+<div class="mt-6 space-y-6">
+<div>
+<label class="block text-sm font-medium text-[var(--text-primary)]" for="asset-type">Asset Type</label>
+<select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--primary-color)] focus:ring-[var(--primary-color)] sm:text-sm" id="asset-type">
+<option>All</option>
+<option>Image</option>
+<option>Video</option>
+<option>Audio</option>
+<option>Document</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-[var(--text-primary)]" for="date-created">Date Created</label>
+<select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--primary-color)] focus:ring-[var(--primary-color)] sm:text-sm" id="date-created">
+<option>Anytime</option>
+<option>Past 24 hours</option>
+<option>Past week</option>
+<option>Past month</option>
+<option>Past year</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-[var(--text-primary)]" for="project">Project</label>
+<select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--primary-color)] focus:ring-[var(--primary-color)] sm:text-sm" id="project">
+<option>All Projects</option>
+<option>Project Alpha</option>
+<option>Project Beta</option>
+<option>Project Gamma</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-[var(--text-primary)]" for="status">Status</label>
+<select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--primary-color)] focus:ring-[var(--primary-color)] sm:text-sm" id="status">
+<option>Any Status</option>
+<option>Draft</option>
+<option>In Review</option>
+<option>Approved</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-[var(--text-primary)]" for="sort-by">Sort By</label>
+<select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--primary-color)] focus:ring-[var(--primary-color)] sm:text-sm" id="sort-by">
+<option>Date Created</option>
+<option>Name</option>
+<option>Last Modified</option>
+</select>
+</div>
+<button class="w-full rounded-md bg-[var(--primary-color)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2">
+              Apply Filters
+            </button>
+</div>
+</aside>
+<main class="flex-1 p-6">
+<div class="flex items-center justify-between">
+<h2 class="text-3xl font-bold text-[var(--text-primary)]">Asset Library</h2>
+<button class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-[var(--text-primary)] shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2">
+              New Asset
+            </button>
+</div>
+<div class="mt-4 border-b border-gray-200">
+<div class="flex gap-4">
+<a class="flex items-center gap-2 border-b-2 border-[var(--primary-color)] px-1 pb-2 text-sm font-semibold text-[var(--primary-color)]" href="#">
+<svg class="size-5" fill="currentColor" height="24px" viewBox="0 0 256 256" width="24px" xmlns="http://www.w3.org/2000/svg">
+<path d="M216,56v60a4,4,0,0,1-4,4H136V44a4,4,0,0,1,4-4h60A16,16,0,0,1,216,56ZM116,40H56A16,16,0,0,0,40,56v60a4,4,0,0,0,4,4h76V44A4,4,0,0,0,116,40Zm96,96H136v76a4,4,0,0,0,4,4h60a16,16,0,0,0,16-16V140A4,4,0,0,0,212,136ZM40,140v60a16,16,0,0,0,16,16h60a4,4,0,0,0,4-4V136H44A4,4,0,0,0,40,140Z"></path>
+</svg>
+<span>Grid</span>
+</a>
+<a class="flex items-center gap-2 border-b-2 border-transparent px-1 pb-2 text-sm font-medium text-[var(--text-secondary)] hover:border-gray-300 hover:text-gray-700" href="#">
+<svg class="size-5" fill="currentColor" height="24px" viewBox="0 0 256 256" width="24px" xmlns="http://www.w3.org/2000/svg">
+<path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"></path>
+</svg>
+<span>List</span>
+</a>
+</div>
+</div>
+<div class="mt-6 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Alpha - Logo" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwNAl9prOXPDBX6-GcFS2ShUoagKP58u8hQ8GvP3zc4lTQrbzdode3-eNyNom96GsfH8CZKJ32b2Cb6rYLIDar1zvPYP1whBmHe__SAsW5iNKHS4q3CjzjpxjGZammcDDLHCKXYCoXtZnx8hjTdMcOWA3sergpjY-3zzyMKKk66gG5RuQgLX7hi3i86jGnP3VxkE9EFk7Bjz6UE7I7sparE3Jqtnz5gkpw1O2VHHUqKE3Y5-Vs6jX6FblfxUvsin3ggLJhrA0vhO11"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Alpha - Logo</h3>
+<p class="text-xs text-[var(--text-secondary)]">Logo</p>
+</div>
+</div>
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Beta - Banner" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsG4e4CX5J-XJydkcJZBZnQzCgICuNT-Uw2XRM9jN7n6sjsjVpvSr0Ih1Y82nFfB_QhvpaDk2Q2NIr97Omm_fRlDwcz-kla15YQd4Pa6DqTSoAlk56EFDwyZ8wQY9W3tLdtzVjsUYpht99D_ZKITmcWzJkZ2vP6s2JbiN1RzNV5eyge0cupOIySbn2PpeohpI8BVf9Iin1zkYw0h-OnwVsAyQF15VavTONWt8uatR_Axa_FIchq-pohQAvFcKR0psqnWjYQCXtKDy3"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Beta - Banner</h3>
+<p class="text-xs text-[var(--text-secondary)]">Banner</p>
+</div>
+</div>
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Gamma - Icon" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkGsF67sVOSNSwlKMazoU-xH8X7N0i5vbZ65gxzoy5IxsAXosxhP6BB1-fDl3XyFMHIzamvJcDSVG-B5sP3_ukPnlAdfUMQEaZmTpxGZ-84haAZGedapSrtVEGt9VMedHV6eTTlzYTAcNPl1X8DTbOzriZ4enRanY2PNlWr1FwLxgUv7_vPOvxXtizTNmY7v_8VECECjdYVaEvZGxMjYmA0eENFNZrtvPucqbltvapTI8vXtgONxaxb9PjQ4XVD_FVl8B511Y3dCue"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Gamma - Icon</h3>
+<p class="text-xs text-[var(--text-secondary)]">Icon</p>
+</div>
+</div>
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Delta - Illustration" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2A8AP-8_rXEmprAxP4wLift6QsNZICmY3tBWGUy8pG5fh_Om4IHplmOkF47mAo2BjzHYviF7we67adQfulx1KuUXD9AtD5IfzHVWrN3jlyfaEqQx9gC7xHx8_JwfGeptzjSRpCLaLrfSBS-uP6JMO6RnpxZYo7aa79C5NR1TavsR_B9DABsk2TXd32qybwBGezpK3q_YuaAngVkskfd33Ff-kbgRqVvjusxjsYJ-oaQFDMkFavO-SDn2k_2q8USLKpsHIlynVYjKU"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Delta - Illustration</h3>
+<p class="text-xs text-[var(--text-secondary)]">Illustration</p>
+</div>
+</div>
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Epsilon - Photo" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWXdTeazWCexnkLG7ShgRp3_PtkdOOj223PpDLc_Uxv8ebmT9uEDAaAwkx0rsTb5r5-5WbL4QhUEtrfl6I4vEIrN9SSycdLePHw-o1AUQZRKw4dEBqPDWtrATAbF9l-yuM29J49JEX445497wbcHjnKgXCD2jxwRs2kCqACFZ6mlyNa-Rb3kGG9sZ3s7L6Z3CMd7bw3F8w-xHbt5D2PAKFeIuJ-yMMm2pV00eJM_p9ja-kQQL-UB8EpW3P-yZtYVJLHCG4jSGNhySH"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Epsilon - Photo</h3>
+<p class="text-xs text-[var(--text-secondary)]">Photo</p>
+</div>
+</div>
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Zeta - Video" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAf21O_dC0njEA7vctGHdoQH8aLYr73YZCUSeWMyz5mCVGESBrDUSm9rKJhSZ9kyq8Ef2iZfzZpfk4WT7DFoVTVDKrg77Wm-_SGj1JtYvUVyN30nfFIXsd-M8GushUUgbx_TE7ZbSchyE0ajNUTIF0cyIjB6PqewfjQgRU_e3xqra-F406BPGsHsjC6bxlo2I6WMpBFAFYoL8eTUv2DLs7G_wOrG9lcztZRSOeCedHnxA1xOhGBOThL1Ld9X97YwClOeyUGxUigTfxQ"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Zeta - Video</h3>
+<p class="text-xs text-[var(--text-secondary)]">Video</p>
+</div>
+</div>
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Eta - Audio" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDgNJuT4b0gkvUaYRN-IETkG8Bbrw0R_4GqOR3txbsYzD6DkgZGdAfLnnsHDsa4U75P0SN82gbH7iX5Coh6oWdJWoRWJAB55FFL1SGF4Zw6ou67rBC0okFjKRI-I62cEIb3WGly3udNoIGC6MTiQtkoG7m8jO6lxG_pYhbhoAi92xVIXIHZrxrd-a5aSkloJGy272ocWWkhXZu3QhMXfLQOZ76Y5d7wyCgwWJnvri9pMEB-eZtEDgZtlYgv0YKnAEPlrzyYwlm7p2o"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Eta - Audio</h3>
+<p class="text-xs text-[var(--text-secondary)]">Audio</p>
+</div>
+</div>
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Theta - Document" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFosGE9_JZ69c6VAQkuEjvIIKn_GY0xuTpEcBUul0L9oi-ZQASGlTwp4SY9uf2oQFrzOUC1kGCiSXXBIbNzs2O5JvqAQrW1jSps6MgcXdX1h7nUHrQponB_6i9xpX3-KVII_SogHQK4CvhS14VCvKMKhYNericjva6heBZ9pyw5hD5eOgibIU4gtBswA9X-L4f7amzKvHitKbmQ83MubOuh9j8ieEVSNMWiy5sS0YnVjw7wQpUOSNR7tdObNRT5UdYGHt3P7Zfb8Ie"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Theta - Document</h3>
+<p class="text-xs text-[var(--text-secondary)]">Document</p>
+</div>
+</div>
+<div class="group relative">
+<div class="aspect-h-7 aspect-w-10 block w-full overflow-hidden rounded-lg bg-gray-100">
+<img alt="Project Iota - Presentation" class="object-cover transition-transform duration-300 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwPt5otASeBIq2pzhdcrURLATJdHh2D2nTCtvZsV0YiVnu3IAv62OIc0oXRpjfJ4YlPB9SpzEVr7BN_E4XZ-5yPkwVn4qDyYKCmHLfUHUOejmaJRPzfwg1koX4EdLg8nx7QUHQUglpsRmCFzl4yVXFtmLCYlvGMqa_QjBNk1mj7p0LZ7xzqpztrFv9lkAQztxoGcAVaCYzqd6zJ3CjtCYtucKoy1GjjPFYm4KDnNz_YJS1rxJzVl8L0hnLTN6TYOoF6B9HNuKEyoB7"/>
+</div>
+<div class="mt-2">
+<h3 class="text-sm font-semibold text-[var(--text-primary)]">Project Iota - Presentation</h3>
+<p class="text-xs text-[var(--text-secondary)]">Presentation</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+
+</body></html>

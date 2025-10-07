@@ -1,0 +1,24 @@
+body { font-family: Arial, sans-serif; margin: 20px; }
+h2 { color: #333; }
+.error { color: red; }
+.card { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 6px; }
+a { text-decoration: none; margin-right: 10px; }
+textarea { width: 300px; height: 100px; }
+
+.badge {
+    background: orange;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-left: 5px;
+}
+.card.pushed {
+    border: 2px solid orange;
+    background: #fff7e6;
+}
+
+.card.headline {
+    border: 2px solid blue;
+    background:#fff7e6;
+}

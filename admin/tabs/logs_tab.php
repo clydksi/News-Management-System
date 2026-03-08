@@ -1,261 +1,193 @@
-<!-- Activity Logs Tab -->
-<section class="bg-white rounded-2xl shadow-md overflow-hidden">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 border-b">
+<!-- Activity Logs Tab — Purple Editorial Edition -->
+<style>
+.log-action-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.log-action-ico .material-icons-round{font-size:15px!important}
+.log-filter-bar{display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px;background:var(--canvas);border-bottom:1px solid var(--border)}
+.log-filter-bar .form-input,.log-filter-bar .form-select{height:36px;font-size:12px;padding:0 10px}
+.log-filter-bar .form-select{padding-right:28px}
+.log-count-chip{padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;font-family:'Fira Code',monospace;background:var(--purple-light);color:var(--purple)}
+</style>
+
+<div class="section-hd">
+    <div class="section-hd-l">
+        <div class="section-hd-icon">
+            <span class="material-icons-round">history</span>
+        </div>
         <div>
-            <h3 class="text-xl font-bold text-gray-800 mb-1">Activity Logs</h3>
-            <p class="text-sm text-gray-500">Monitor system activities and user actions</p>
-        </div>
-        <div class="flex space-x-2 mt-3 sm:mt-0">
-            <button onclick="exportLogs()" class="action-btn bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center text-sm shadow-lg">
-                <span class="material-icons mr-2 text-base">download</span> Export
-            </button>
-            <button onclick="location.reload()" class="action-btn bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center text-sm">
-                <span class="material-icons mr-2 text-base">refresh</span> Refresh
-            </button>
+            <div class="section-hd-title">Activity Logs</div>
+            <div class="section-hd-sub">Monitor system activities and user actions</div>
         </div>
     </div>
-
-    <!-- Filters -->
-    <div class="p-4 bg-gray-50 border-b">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="relative">
-                <input type="text" id="searchLogs" placeholder="Search logs..." 
-                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                <span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">search</span>
-            </div>
-            <select id="filterAction" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                <option value="">All Actions</option>
-                <option value="create">Create</option>
-                <option value="update">Update</option>
-                <option value="delete">Delete</option>
-                <option value="login">Login</option>
-                <option value="logout">Logout</option>
-            </select>
-            <input type="date" id="filterDateFrom" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-            <input type="date" id="filterDateTo" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-        </div>
+    <div class="section-hd-r" style="gap:8px">
+        <span class="log-count-chip"><?= number_format($totalLogs ?? 0) ?> entries</span>
+        <button onclick="exportLogs()" class="btn btn-outline btn-sm">
+            <span class="material-icons-round">download</span>Export CSV
+        </button>
+        <a href="?tab=logs" class="btn btn-outline btn-sm">
+            <span class="material-icons-round">refresh</span>Refresh
+        </a>
     </div>
+</div>
 
-    <!-- Mobile Card View -->
-    <div class="lg:hidden">
-        <div class="divide-y divide-gray-200">
-            <?php if (isset($logs) && !empty($logs)): ?>
-                <?php foreach ($logs as $log): ?>
-                <div class="p-4 hover:bg-gray-50 transition-colors">
-                    <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mr-3">
-                                <span class="material-icons text-blue-600 text-sm">
-                                    <?php 
-                                    $icons = [
-                                        'create' => 'add_circle',
-                                        'update' => 'edit',
-                                        'delete' => 'delete',
-                                        'login' => 'login',
-                                        'logout' => 'logout'
-                                    ];
-                                    echo $icons[$log['action']] ?? 'info';
-                                    ?>
-                                </span>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-800"><?= e($log['username'] ?? 'System') ?></p>
-                                <p class="text-xs text-gray-500"><?= e($log['action']) ?></p>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-600 mb-2"><?= e($log['description']) ?></p>
-                    <p class="text-xs text-gray-400">
-                        <span class="material-icons text-xs align-middle">schedule</span>
-                        <?= date('M d, Y g:i A', strtotime($log['created_at'])) ?>
-                    </p>
-                </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="p-8 text-center text-gray-500">
-                    <span class="material-icons text-6xl mb-2 text-gray-300">history</span>
-                    <p>No activity logs found</p>
-                </div>
-            <?php endif; ?>
-        </div>
+<!-- Server-side filter form -->
+<form method="GET" action="" class="log-filter-bar">
+    <input type="hidden" name="tab" value="logs"/>
+    <div style="position:relative;flex:1;min-width:160px">
+        <span class="material-icons-round" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:15px!important;color:var(--ink-faint);pointer-events:none">search</span>
+        <input type="text" name="lq" value="<?= e($_GET['lq'] ?? '') ?>"
+               placeholder="Search user or description…"
+               class="form-input" style="padding-left:30px;width:100%;box-sizing:border-box"/>
     </div>
+    <select name="laction" class="form-select" style="min-width:130px">
+        <option value="">All Actions</option>
+        <?php foreach (['create','update','delete','login','logout'] as $act): ?>
+        <option value="<?= $act ?>" <?= ($_GET['laction'] ?? '') === $act ? 'selected' : '' ?>><?= ucfirst($act) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <input type="date" name="lfrom" value="<?= e($_GET['lfrom'] ?? '') ?>"
+           class="form-input" style="width:140px" title="From date"/>
+    <input type="date" name="lto" value="<?= e($_GET['lto'] ?? '') ?>"
+           class="form-input" style="width:140px" title="To date"/>
+    <button type="submit" class="btn btn-purple btn-sm">
+        <span class="material-icons-round">filter_list</span>Filter
+    </button>
+    <?php if (!empty($_GET['lq']) || !empty($_GET['laction']) || !empty($_GET['lfrom']) || !empty($_GET['lto'])): ?>
+    <a href="?tab=logs" class="btn btn-outline btn-sm" style="color:#DC2626;border-color:#FECACA">
+        <span class="material-icons-round">clear</span>Clear
+    </a>
+    <?php endif; ?>
+</form>
 
-    <!-- Desktop Table View -->
-    <div class="hidden lg:block overflow-x-auto">
-        <table class="w-full text-left">
+<!-- Table -->
+<div class="data-table-wrap" style="border-radius:0;border:none;border-top:1px solid var(--border)">
+    <div style="overflow-x:auto">
+        <table class="data-table">
             <thead>
-                <tr class="bg-gray-50 text-gray-600 uppercase text-xs font-semibold border-b">
-                    <th class="py-4 px-6">User</th>
-                    <th class="py-4 px-6">Action</th>
-                    <th class="py-4 px-6">Description</th>
-                    <th class="py-4 px-6">IP Address</th>
-                    <th class="py-4 px-6">Date & Time</th>
+                <tr>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Description</th>
+                    <th>IP Address</th>
+                    <th>Date & Time</th>
                 </tr>
             </thead>
-            <tbody class="text-gray-700 divide-y divide-gray-100">
-            <?php if (isset($logs) && !empty($logs)): ?>
-                <?php foreach ($logs as $log): ?>
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="py-4 px-6">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mr-2 text-xs font-bold text-purple-700">
-                                <?= strtoupper(substr($log['username'] ?? 'S', 0, 1)) ?>
-                            </div>
-                            <span class="font-medium"><?= e($log['username'] ?? 'System') ?></span>
+            <tbody>
+            <?php if (!empty($logs)):
+                $actionMeta = [
+                    'create'  => ['#ECFDF5','#059669','add_circle'],
+                    'update'  => ['#EFF6FF','#2563EB','edit'],
+                    'delete'  => ['#FFF1F2','#DC2626','delete'],
+                    'login'   => ['var(--purple-light)','var(--purple)','login'],
+                    'logout'  => ['var(--canvas)','var(--ink-faint)','logout'],
+                ];
+                foreach ($logs as $log):
+                    [$bg, $clr, $ico] = $actionMeta[$log['action']] ?? ['var(--canvas)','var(--ink-faint)','info'];
+            ?>
+            <tr>
+                <td>
+                    <div style="display:flex;align-items:center;gap:9px">
+                        <div style="width:30px;height:30px;border-radius:8px;background:var(--purple-light);color:var(--purple);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">
+                            <?= strtoupper(substr($log['username'] ?? 'S', 0, 1)) ?>
                         </div>
-                    </td>
-                    <td class="py-4 px-6">
-                        <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full
-                            <?php 
-                            $actionColors = [
-                                'create' => 'bg-green-100 text-green-700',
-                                'update' => 'bg-blue-100 text-blue-700',
-                                'delete' => 'bg-red-100 text-red-700',
-                                'login' => 'bg-purple-100 text-purple-700',
-                                'logout' => 'bg-gray-100 text-gray-700'
-                            ];
-                            echo $actionColors[$log['action']] ?? 'bg-gray-100 text-gray-700';
-                            ?>">
-                            <span class="material-icons text-xs mr-1">
-                                <?php 
-                                $icons = [
-                                    'create' => 'add_circle',
-                                    'update' => 'edit',
-                                    'delete' => 'delete',
-                                    'login' => 'login',
-                                    'logout' => 'logout'
-                                ];
-                                echo $icons[$log['action']] ?? 'info';
-                                ?>
-                            </span>
+                        <span style="font-weight:600;font-size:13px"><?= e($log['username'] ?? 'System') ?></span>
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:7px">
+                        <div class="log-action-ico" style="background:<?= $bg ?>">
+                            <span class="material-icons-round" style="color:<?= $clr ?>"><?= $ico ?></span>
+                        </div>
+                        <span class="badge" style="background:<?= $bg ?>;color:<?= $clr ?>;border-color:<?= $bg ?>">
                             <?= ucfirst(e($log['action'])) ?>
                         </span>
-                    </td>
-                    <td class="py-4 px-6 text-sm"><?= e($log['description']) ?></td>
-                    <td class="py-4 px-6 text-sm text-gray-500"><?= e($log['ip_address'] ?? '-') ?></td>
-                    <td class="py-4 px-6 text-sm text-gray-500">
-                        <?= date('M d, Y', strtotime($log['created_at'])) ?><br>
-                        <span class="text-xs"><?= date('g:i A', strtotime($log['created_at'])) ?></span>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <tr>
-                    <td colspan="5" class="py-12 text-center text-gray-500">
-                        <span class="material-icons text-6xl mb-2 text-gray-300 block">history</span>
-                        No activity logs found
-                    </td>
-                </tr>
+                    </div>
+                </td>
+                <td style="font-size:12px;color:var(--ink-muted);max-width:320px">
+                    <?= e($log['description']) ?>
+                </td>
+                <td style="font-size:11px;color:var(--ink-faint);font-family:'Fira Code',monospace">
+                    <?= e($log['ip_address'] ?? '—') ?>
+                </td>
+                <td style="font-size:11px;color:var(--ink-faint);font-family:'Fira Code',monospace;white-space:nowrap">
+                    <?= date('M d, Y', strtotime($log['created_at'])) ?><br>
+                    <span style="color:var(--ink-muted)"><?= date('g:i A', strtotime($log['created_at'])) ?></span>
+                </td>
+            </tr>
+            <?php endforeach; else: ?>
+            <tr>
+                <td colspan="5">
+                    <div class="empty-state">
+                        <div class="empty-icon"><span class="material-icons-round">history</span></div>
+                        <div class="empty-title">No Logs Found</div>
+                        <div class="empty-sub">
+                            <?php if (!empty($_GET['lq']) || !empty($_GET['laction'])): ?>
+                            No logs match your current filters. <a href="?tab=logs" style="color:var(--purple)">Clear filters</a>
+                            <?php else: ?>
+                            Activity will appear here as users interact with the system.
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </td>
+            </tr>
             <?php endif; ?>
             </tbody>
         </table>
     </div>
 
     <!-- Pagination -->
-    <?php if (isset($totalPages) && $totalPages > 1): ?>
-    <div class="flex flex-col sm:flex-row justify-between items-center p-6 border-t bg-gray-50">
-        <p class="text-sm text-gray-600 mb-3 sm:mb-0">
-            Showing <?= min($offset + 1, $totalLogs) ?> to <?= min($offset + $perPage, $totalLogs) ?> of <?= $totalLogs ?> logs
-        </p>
-        <div class="flex items-center space-x-1">
+    <?php
+    // Build query string preserving filters
+    $logQS = http_build_query(array_filter([
+        'tab'     => 'logs',
+        'lq'      => $_GET['lq'] ?? '',
+        'laction' => $_GET['laction'] ?? '',
+        'lfrom'   => $_GET['lfrom'] ?? '',
+        'lto'     => $_GET['lto'] ?? '',
+    ]));
+    ?>
+    <?php if ($totalPages > 1): ?>
+    <div class="pg-bar">
+        <div class="pg-info">
+            Showing <strong><?= number_format(min(($page-1)*$perPage+1, $totalLogs)) ?>–<?= number_format(min($page*$perPage, $totalLogs)) ?></strong>
+            of <strong><?= number_format($totalLogs) ?></strong> logs
+        </div>
+        <div class="pg-btns">
             <?php if ($page > 1): ?>
-                <a href="?tab=logs&page=<?= $page - 1 ?>" 
-                   class="px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-sm transition-colors">
-                    <span class="material-icons text-sm align-middle">chevron_left</span>
-                </a>
-            <?php else: ?>
-                <span class="px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-400 text-sm cursor-not-allowed">
-                    <span class="material-icons text-sm align-middle">chevron_left</span>
-                </span>
+            <a href="?<?= $logQS ?>&page=<?= $page-1 ?>" class="pg-btn">
+                <span class="material-icons-round">chevron_left</span>
+            </a>
             <?php endif; ?>
-
-            <?php 
-            $startPage = max(1, $page - 2);
-            $endPage = min($totalPages, $page + 2);
-            for ($i = $startPage; $i <= $endPage; $i++): 
-            ?>
-                <?php if ($i == $page): ?>
-                    <span class="px-4 py-2 border border-purple-600 rounded-lg bg-purple-600 text-white text-sm font-semibold"><?= $i ?></span>
-                <?php else: ?>
-                    <a href="?tab=logs&page=<?= $i ?>" 
-                       class="px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-sm transition-colors"><?= $i ?></a>
-                <?php endif; ?>
+            <?php for ($i = max(1,$page-2); $i <= min($totalPages,$page+2); $i++): ?>
+            <a href="?<?= $logQS ?>&page=<?= $i ?>" class="pg-btn <?= $i===$page?'active':'' ?>"><?= $i ?></a>
             <?php endfor; ?>
-
             <?php if ($page < $totalPages): ?>
-                <a href="?tab=logs&page=<?= $page + 1 ?>" 
-                   class="px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-sm transition-colors">
-                    <span class="material-icons text-sm align-middle">chevron_right</span>
-                </a>
-            <?php else: ?>
-                <span class="px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-400 text-sm cursor-not-allowed">
-                    <span class="material-icons text-sm align-middle">chevron_right</span>
-                </span>
+            <a href="?<?= $logQS ?>&page=<?= $page+1 ?>" class="pg-btn">
+                <span class="material-icons-round">chevron_right</span>
+            </a>
             <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
-</section>
+</div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Search and Filter
-    const searchInput = document.getElementById('searchLogs');
-    const actionFilter = document.getElementById('filterAction');
-    const dateFromFilter = document.getElementById('filterDateFrom');
-    const dateToFilter = document.getElementById('filterDateTo');
-
-    function filterLogs() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const actionValue = actionFilter.value.toLowerCase();
-        const dateFrom = dateFromFilter.value;
-        const dateTo = dateToFilter.value;
-
-        const rows = document.querySelectorAll('tbody tr, .lg\\:hidden > div > div');
-
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            const matchesSearch = searchTerm === '' || text.includes(searchTerm);
-            const matchesAction = actionValue === '' || text.includes(actionValue);
-            
-            // For date filtering, you'd need to add data attributes or parse the date
-            const matchesDate = true; // Simplified for now
-
-            if (matchesSearch && matchesAction && matchesDate) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    searchInput?.addEventListener('input', filterLogs);
-    actionFilter?.addEventListener('change', filterLogs);
-    dateFromFilter?.addEventListener('change', filterLogs);
-    dateToFilter?.addEventListener('change', filterLogs);
-});
-
-// Export Logs
 async function exportLogs() {
     try {
-        const response = await fetch('actions/export_logs.php', {
-            method: 'POST'
+        const qs = new URLSearchParams({
+            lq:      document.querySelector('[name="lq"]')?.value     || '',
+            laction: document.querySelector('[name="laction"]')?.value || '',
+            lfrom:   document.querySelector('[name="lfrom"]')?.value   || '',
+            lto:     document.querySelector('[name="lto"]')?.value     || '',
         });
-        
+        const response = await fetch('actions/export_logs.php?' + qs.toString(), { method: 'POST' });
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `activity_logs_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        showNotification('Logs exported successfully!', 'success');
-    } catch (error) {
-        console.error('Error:', error);
-        showNotification('Failed to export logs', 'error');
+        const url  = URL.createObjectURL(blob);
+        const a    = Object.assign(document.createElement('a'), { href: url, download: `activity_logs_${new Date().toISOString().split('T')[0]}.csv` });
+        document.body.appendChild(a); a.click();
+        URL.revokeObjectURL(url); a.remove();
+        showToast('Logs exported successfully!', 'success');
+    } catch (e) {
+        showToast('Failed to export logs', 'error');
     }
 }
 </script>

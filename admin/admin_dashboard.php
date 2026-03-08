@@ -125,10 +125,23 @@ try {
     $totalCategories = $pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
 
     if ($activeTab === 'users') {
-        $s = $pdo->prepare("SELECT COUNT(*) FROM users u WHERE {$dw_u}"); $s->execute($dp_u); $totalUsers = $s->fetchColumn();
+        // Server-side filter support
+        $uSearch = trim($_GET['uq'] ?? '');
+        $uRole   = in_array($_GET['urole'] ?? '', ['user','admin','superadmin']) ? $_GET['urole'] : '';
+        $uStatus = isset($_GET['ustatus']) && $_GET['ustatus'] !== '' ? (int)$_GET['ustatus'] : '';
+        $uDept   = filter_input(INPUT_GET, 'udept', FILTER_VALIDATE_INT) ?: 0;
+        $uExtra = []; $uExtraP = [];
+        if ($uSearch) { $uExtra[] = 'u.username LIKE ?'; $uExtraP[] = "%$uSearch%"; }
+        if ($uRole)   { $uExtra[] = 'u.role = ?';       $uExtraP[] = $uRole; }
+        if ($uStatus !== '') { $uExtra[] = 'u.is_active = ?'; $uExtraP[] = $uStatus; }
+        if ($uDept)   { $uExtra[] = 'u.department_id = ?'; $uExtraP[] = $uDept; }
+        $uExtraSQL = $uExtra ? ' AND ' . implode(' AND ', $uExtra) : '';
+
+        $s = $pdo->prepare("SELECT COUNT(*) FROM users u WHERE {$dw_u}{$uExtraSQL}");
+        $s->execute([...$dp_u, ...$uExtraP]); $totalUsers = $s->fetchColumn();
         $totalPages = max(1, ceil($totalUsers / $perPage));
-        $stmt = $pdo->prepare("SELECT u.id, u.username, u.role, u.created_at, u.is_active, u.view_scope, d.name AS department, u.department_id FROM users u LEFT JOIN departments d ON u.department_id = d.id WHERE {$dw_u} ORDER BY u.created_at DESC LIMIT ? OFFSET ?");
-        $stmt->execute([...$dp_u, $perPage, $offset]); $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare("SELECT u.id, u.username, u.role, u.created_at, u.is_active, u.view_scope, d.name AS department, u.department_id FROM users u LEFT JOIN departments d ON u.department_id = d.id WHERE {$dw_u}{$uExtraSQL} ORDER BY u.created_at DESC LIMIT ? OFFSET ?");
+        $stmt->execute([...$dp_u, ...$uExtraP, $perPage, $offset]); $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     if ($activeTab === 'departments') {
         $s = $pdo->prepare("SELECT COUNT(*) FROM departments d WHERE {$dw_d}"); $s->execute($dp_d); $totalDepts = $s->fetchColumn();
@@ -144,6 +157,32 @@ try {
     }
     $s = $pdo->prepare("SELECT id, name FROM departments d WHERE {$dw_d} ORDER BY name"); $s->execute($dp_d);
     $allDepartments = $s->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($activeTab === 'logs') {
+        $logSearch   = trim($_GET['lq'] ?? '');
+        $logAction   = in_array($_GET['laction'] ?? '', ['create','update','delete','login','logout']) ? $_GET['laction'] : '';
+        $logDateFrom = $_GET['lfrom'] ?? '';
+        $logDateTo   = $_GET['lto']   ?? '';
+        $logWhere = ['1=1']; $logParams = [];
+        if ($logSearch)   { $logWhere[] = '(al.description LIKE ? OR u.username LIKE ?)'; $logParams[] = "%$logSearch%"; $logParams[] = "%$logSearch%"; }
+        if ($logAction)   { $logWhere[] = 'al.action = ?';              $logParams[] = $logAction; }
+        if ($logDateFrom) { $logWhere[] = 'DATE(al.created_at) >= ?';   $logParams[] = $logDateFrom; }
+        if ($logDateTo)   { $logWhere[] = 'DATE(al.created_at) <= ?';   $logParams[] = $logDateTo; }
+        $logWhereSQL = implode(' AND ', $logWhere);
+        $s = $pdo->prepare("SELECT COUNT(*) FROM activity_logs al LEFT JOIN users u ON al.user_id = u.id WHERE $logWhereSQL");
+        $s->execute($logParams); $totalLogs = (int)$s->fetchColumn();
+        $totalPages = max(1, ceil($totalLogs / $perPage));
+        $stmt = $pdo->prepare("SELECT al.id, al.action, al.description, al.ip_address, al.created_at, u.username FROM activity_logs al LEFT JOIN users u ON al.user_id = u.id WHERE $logWhereSQL ORDER BY al.created_at DESC LIMIT ? OFFSET ?");
+        $stmt->execute([...$logParams, $perPage, $offset]); $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    if ($activeTab === 'settings') {
+        $settings = [];
+        try {
+            $rows = $pdo->query("SELECT setting_key, setting_value FROM settings")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $row) { $settings[$row['setting_key']] = $row['setting_value']; }
+        } catch (PDOException $e) {}
+    }
 
     if ($activeTab === 'access') {
         $allUsers = $pdo->query("SELECT u.id, u.username, u.view_scope, d.name AS dept_name FROM users u LEFT JOIN departments d ON u.department_id = d.id ORDER BY u.username ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -726,6 +765,18 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
                     </a>
                 </li>
                 <li>
+                    <a href="?tab=logs" class="nav-link <?= $activeTab==='logs'?'active':'' ?>">
+                        <span class="nl-icon"><span class="material-icons-round">history</span></span>
+                        Activity Logs
+                    </a>
+                </li>
+                <li>
+                    <a href="?tab=settings" class="nav-link <?= $activeTab==='settings'?'active':'' ?>">
+                        <span class="nl-icon"><span class="material-icons-round">settings</span></span>
+                        Settings
+                    </a>
+                </li>
+                <li>
                     <a href="../user/user_dashboard.php" class="nav-link">
                         <span class="nl-icon"><span class="material-icons-round">article</span></span>
                         Articles
@@ -904,6 +955,12 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
                 <button onclick="location.href='?tab=analytics'" class="tab-btn <?= $activeTab==='analytics'?'active':'' ?>">
                     <span class="material-icons-round">analytics</span>Analytics
                 </button>
+                <button onclick="location.href='?tab=logs'" class="tab-btn <?= $activeTab==='logs'?'active':'' ?>">
+                    <span class="material-icons-round">history</span>Logs
+                </button>
+                <button onclick="location.href='?tab=settings'" class="tab-btn <?= $activeTab==='settings'?'active':'' ?>">
+                    <span class="material-icons-round">settings</span>Settings
+                </button>
                 <?php if ($isSuperAdmin): ?>
                 <button onclick="location.href='?tab=access'" class="tab-btn <?= $activeTab==='access'?'active':'' ?>">
                     <span class="material-icons-round">lock_open</span>Access Control
@@ -923,6 +980,10 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
                     <?php include 'tabs/analytics_tab.php'; ?>
                 <?php elseif ($activeTab === 'access' && $isSuperAdmin): ?>
                     <?php include 'tabs/access_tab.php'; ?>
+                <?php elseif ($activeTab === 'logs'): ?>
+                    <?php include 'tabs/logs_tab.php'; ?>
+                <?php elseif ($activeTab === 'settings'): ?>
+                    <?php include 'tabs/settings_tab.php'; ?>
                 <?php endif; ?>
             </div>
         </div>

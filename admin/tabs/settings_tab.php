@@ -1,292 +1,338 @@
-<!-- System Settings Tab -->
-<section class="space-y-6">
-    <!-- General Settings -->
-    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
-        <div class="p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50">
-            <div class="flex items-center">
-                <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mr-4">
-                    <span class="material-icons text-purple-600 text-2xl">settings</span>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800">System Settings</h3>
-                    <p class="text-sm text-gray-500">Configure your CMS system preferences</p>
-                </div>
-            </div>
+<!-- System Settings Tab — Purple Editorial Edition -->
+<style>
+.set-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.set-card-hd{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.set-card-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.set-card-ico .material-icons-round{font-size:18px!important}
+.set-card-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--ink)}
+.set-card-sub{font-size:10px;color:var(--ink-faint);font-family:'Fira Code',monospace;margin-top:2px}
+.set-card-body{padding:20px 22px}
+.set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.set-grid{grid-template-columns:1fr}}
+.set-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:9px;background:var(--canvas);border:1px solid var(--border);margin-bottom:10px}
+.set-toggle-row:last-child{margin-bottom:0}
+.set-toggle-row:hover{border-color:var(--border-md)}
+.set-toggle-label{font-size:13px;font-weight:600;color:var(--ink)}
+.set-toggle-sub{font-size:11px;color:var(--ink-faint);margin-top:2px}
+/* Custom toggle switch */
+.toggle-sw{position:relative;display:inline-flex;align-items:center;width:44px;height:24px;cursor:pointer;flex-shrink:0}
+.toggle-sw input{position:absolute;opacity:0;width:0;height:0}
+.toggle-track{width:44px;height:24px;background:var(--border-md);border-radius:99px;transition:background .2s;position:relative}
+.toggle-track::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}
+.toggle-sw input:checked + .toggle-track{background:var(--purple)}
+.toggle-sw input:checked + .toggle-track::after{left:23px}
+/* Action buttons */
+.set-action-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--canvas);border:1px solid var(--border);border-radius:9px;margin-bottom:10px}
+.set-action-row:last-child{margin-bottom:0}
+.set-action-row:hover{border-color:var(--border-md)}
+.set-action-info{flex:1;min-width:0}
+.set-action-title{font-size:13px;font-weight:600;color:var(--ink)}
+.set-action-desc{font-size:11px;color:var(--ink-faint);margin-top:2px}
+</style>
+
+<div class="section-hd">
+    <div class="section-hd-l">
+        <div class="section-hd-icon">
+            <span class="material-icons-round">settings</span>
         </div>
+        <div>
+            <div class="section-hd-title">System Settings</div>
+            <div class="section-hd-sub">Configure your CMS preferences and system behavior</div>
+        </div>
+    </div>
+</div>
 
-        <form id="settingsForm" class="p-6 space-y-6">
-            <!-- Site Information -->
-            <div class="border-b pb-6">
-                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <span class="material-icons text-blue-600 mr-2">info</span>
-                    Site Information
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Site Name</label>
-                        <input type="text" name="site_name" value="<?= e($settings['site_name'] ?? 'News CMS') ?>"
-                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Site Email</label>
-                        <input type="email" name="site_email" value="<?= e($settings['site_email'] ?? '') ?>"
-                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Site Description</label>
-                        <textarea name="site_description" rows="3"
-                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"><?= e($settings['site_description'] ?? '') ?></textarea>
-                    </div>
-                </div>
+<div style="padding:20px 22px">
+<form id="settingsForm">
+
+    <!-- ── Site Information ───────────────────────── -->
+    <div class="set-card">
+        <div class="set-card-hd">
+            <div class="set-card-ico" style="background:#EFF6FF">
+                <span class="material-icons-round" style="color:#2563EB">info</span>
             </div>
-
-            <!-- Pagination Settings -->
-            <div class="border-b pb-6">
-                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <span class="material-icons text-green-600 mr-2">view_list</span>
-                    Pagination Settings
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Articles Per Page</label>
-                        <input type="number" name="articles_per_page" min="5" max="100" value="<?= e($settings['articles_per_page'] ?? '10') ?>"
-                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Users Per Page</label>
-                        <input type="number" name="users_per_page" min="5" max="100" value="<?= e($settings['users_per_page'] ?? '10') ?>"
-                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Article Settings -->
-            <div class="border-b pb-6">
-                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <span class="material-icons text-orange-600 mr-2">article</span>
-                    Article Settings
-                </h4>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                        <div>
-                            <p class="font-semibold text-gray-800">Require Approval for Articles</p>
-                            <p class="text-sm text-gray-500">New articles need admin approval before publishing</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="require_approval" value="1" <?= ($settings['require_approval'] ?? '0') == '1' ? 'checked' : '' ?> class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                    </div>
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                        <div>
-                            <p class="font-semibold text-gray-800">Enable Comments</p>
-                            <p class="text-sm text-gray-500">Allow users to comment on articles</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="enable_comments" value="1" <?= ($settings['enable_comments'] ?? '0') == '1' ? 'checked' : '' ?> class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- File Upload Settings -->
-            <div class="border-b pb-6">
-                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <span class="material-icons text-red-600 mr-2">upload_file</span>
-                    File Upload Settings
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Max File Size (MB)</label>
-                        <input type="number" name="max_file_size" min="1" max="100" value="<?= e($settings['max_file_size'] ?? '10') ?>"
-                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Allowed File Types</label>
-                        <input type="text" name="allowed_file_types" value="<?= e($settings['allowed_file_types'] ?? 'jpg,jpeg,png,gif,pdf,doc,docx') ?>"
-                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="jpg,png,pdf">
-                        <p class="text-xs text-gray-500 mt-1">Separate extensions with commas</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Email Notifications -->
-            <div class="border-b pb-6">
-                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <span class="material-icons text-purple-600 mr-2">email</span>
-                    Email Notifications
-                </h4>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                        <div>
-                            <p class="font-semibold text-gray-800">New User Registration</p>
-                            <p class="text-sm text-gray-500">Send email when a new user is registered</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="email_new_user" value="1" <?= ($settings['email_new_user'] ?? '0') == '1' ? 'checked' : '' ?> class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                    </div>
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                        <div>
-                            <p class="font-semibold text-gray-800">New Article Published</p>
-                            <p class="text-sm text-gray-500">Send email when a new article is published</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="email_new_article" value="1" <?= ($settings['email_new_article'] ?? '0') == '1' ? 'checked' : '' ?> class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Maintenance Mode -->
             <div>
-                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <span class="material-icons text-yellow-600 mr-2">construction</span>
-                    Maintenance Mode
-                </h4>
-                <div class="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                    <div>
-                        <p class="font-semibold text-gray-800">Enable Maintenance Mode</p>
-                        <p class="text-sm text-gray-500">Show maintenance page to all users except admins</p>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="maintenance_mode" value="1" <?= ($settings['maintenance_mode'] ?? '0') == '1' ? 'checked' : '' ?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
-                    </label>
+                <div class="set-card-title">Site Information</div>
+                <div class="set-card-sub">Basic identity and contact details</div>
+            </div>
+        </div>
+        <div class="set-card-body">
+            <div class="set-grid">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label"><span class="material-icons-round">label</span>Site Name</label>
+                    <input type="text" name="site_name" class="form-input"
+                           value="<?= e($settings['site_name'] ?? 'News CMS') ?>" placeholder="My News CMS"/>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label"><span class="material-icons-round">email</span>Site Email</label>
+                    <input type="email" name="site_email" class="form-input"
+                           value="<?= e($settings['site_email'] ?? '') ?>" placeholder="admin@example.com"/>
+                </div>
+                <div class="form-group" style="margin-bottom:0;grid-column:1/-1">
+                    <label class="form-label"><span class="material-icons-round">description</span>Site Description</label>
+                    <textarea name="site_description" rows="2" class="form-input" style="resize:vertical"
+                              placeholder="A brief description of your CMS"><?= e($settings['site_description'] ?? '') ?></textarea>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Save Button -->
-            <div class="flex justify-end space-x-3 pt-6 border-t">
-                <button type="button" onclick="location.reload()"
-                    class="action-btn px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium">
-                    Cancel
-                </button>
-                <button type="submit"
-                    class="action-btn px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl transition-all shadow-lg font-medium">
-                    <span class="material-icons text-sm align-middle mr-2">save</span>
-                    Save Settings
-                </button>
+    <!-- ── Pagination ─────────────────────────────── -->
+    <div class="set-card">
+        <div class="set-card-hd">
+            <div class="set-card-ico" style="background:#ECFDF5">
+                <span class="material-icons-round" style="color:#059669">view_list</span>
             </div>
-        </form>
+            <div>
+                <div class="set-card-title">Pagination Settings</div>
+                <div class="set-card-sub">Control how many items appear per page</div>
+            </div>
+        </div>
+        <div class="set-card-body">
+            <div class="set-grid">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label"><span class="material-icons-round">article</span>Articles Per Page</label>
+                    <input type="number" name="articles_per_page" min="5" max="100" class="form-input"
+                           value="<?= e($settings['articles_per_page'] ?? '10') ?>"/>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label"><span class="material-icons-round">people</span>Users Per Page</label>
+                    <input type="number" name="users_per_page" min="5" max="100" class="form-input"
+                           value="<?= e($settings['users_per_page'] ?? '10') ?>"/>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Database Backup -->
-    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
-        <div class="p-6 border-b">
-            <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                <span class="material-icons text-blue-600 mr-2">backup</span>
-                Database Backup
-            </h3>
+    <!-- ── Article Settings ───────────────────────── -->
+    <div class="set-card">
+        <div class="set-card-hd">
+            <div class="set-card-ico" style="background:#FFF7ED">
+                <span class="material-icons-round" style="color:#EA580C">article</span>
+            </div>
+            <div>
+                <div class="set-card-title">Article Settings</div>
+                <div class="set-card-sub">Article workflow and interaction controls</div>
+            </div>
         </div>
-        <div class="p-6">
-            <p class="text-gray-600 mb-4">Create a backup of your database to protect your data.</p>
-            <button onclick="backupDatabase()" 
-                class="action-btn px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl transition-all shadow-lg font-medium">
-                <span class="material-icons text-sm align-middle mr-2">cloud_download</span>
-                Create Backup
+        <div class="set-card-body" style="padding-bottom:10px">
+            <div class="set-toggle-row">
+                <div>
+                    <div class="set-toggle-label">Require Approval for Articles</div>
+                    <div class="set-toggle-sub">New articles need admin approval before publishing</div>
+                </div>
+                <label class="toggle-sw">
+                    <input type="checkbox" name="require_approval" value="1"
+                           <?= ($settings['require_approval'] ?? '0') == '1' ? 'checked' : '' ?>>
+                    <div class="toggle-track"></div>
+                </label>
+            </div>
+            <div class="set-toggle-row">
+                <div>
+                    <div class="set-toggle-label">Enable Comments</div>
+                    <div class="set-toggle-sub">Allow users to comment on articles</div>
+                </div>
+                <label class="toggle-sw">
+                    <input type="checkbox" name="enable_comments" value="1"
+                           <?= ($settings['enable_comments'] ?? '0') == '1' ? 'checked' : '' ?>>
+                    <div class="toggle-track"></div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── File Upload ────────────────────────────── -->
+    <div class="set-card">
+        <div class="set-card-hd">
+            <div class="set-card-ico" style="background:#FFF1F2">
+                <span class="material-icons-round" style="color:#DC2626">upload_file</span>
+            </div>
+            <div>
+                <div class="set-card-title">File Upload Settings</div>
+                <div class="set-card-sub">Control what files users can upload</div>
+            </div>
+        </div>
+        <div class="set-card-body">
+            <div class="set-grid">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label"><span class="material-icons-round">storage</span>Max File Size (MB)</label>
+                    <input type="number" name="max_file_size" min="1" max="100" class="form-input"
+                           value="<?= e($settings['max_file_size'] ?? '10') ?>"/>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label"><span class="material-icons-round">extension</span>Allowed File Types</label>
+                    <input type="text" name="allowed_file_types" class="form-input"
+                           value="<?= e($settings['allowed_file_types'] ?? 'jpg,jpeg,png,gif,pdf,doc,docx') ?>"
+                           placeholder="jpg,png,pdf"/>
+                    <div style="font-size:10px;color:var(--ink-faint);margin-top:4px">Separate extensions with commas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Email Notifications ────────────────────── -->
+    <div class="set-card">
+        <div class="set-card-hd">
+            <div class="set-card-ico" style="background:var(--purple-light)">
+                <span class="material-icons-round" style="color:var(--purple)">email</span>
+            </div>
+            <div>
+                <div class="set-card-title">Email Notifications</div>
+                <div class="set-card-sub">Automatic email alerts for system events</div>
+            </div>
+        </div>
+        <div class="set-card-body" style="padding-bottom:10px">
+            <div class="set-toggle-row">
+                <div>
+                    <div class="set-toggle-label">New User Registration</div>
+                    <div class="set-toggle-sub">Send email when a new user is registered</div>
+                </div>
+                <label class="toggle-sw">
+                    <input type="checkbox" name="email_new_user" value="1"
+                           <?= ($settings['email_new_user'] ?? '0') == '1' ? 'checked' : '' ?>>
+                    <div class="toggle-track"></div>
+                </label>
+            </div>
+            <div class="set-toggle-row">
+                <div>
+                    <div class="set-toggle-label">New Article Published</div>
+                    <div class="set-toggle-sub">Send email when a new article is published</div>
+                </div>
+                <label class="toggle-sw">
+                    <input type="checkbox" name="email_new_article" value="1"
+                           <?= ($settings['email_new_article'] ?? '0') == '1' ? 'checked' : '' ?>>
+                    <div class="toggle-track"></div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Maintenance Mode ───────────────────────── -->
+    <div class="set-card">
+        <div class="set-card-hd">
+            <div class="set-card-ico" style="background:#FFFBEB">
+                <span class="material-icons-round" style="color:#D97706">construction</span>
+            </div>
+            <div>
+                <div class="set-card-title">Maintenance Mode</div>
+                <div class="set-card-sub">Take the system offline for regular users</div>
+            </div>
+        </div>
+        <div class="set-card-body" style="padding-bottom:10px">
+            <div class="set-toggle-row" style="border-color:<?= ($settings['maintenance_mode'] ?? '0') == '1' ? '#FCD34D' : 'var(--border)' ?>;background:<?= ($settings['maintenance_mode'] ?? '0') == '1' ? '#FFFBEB' : 'var(--canvas)' ?>">
+                <div>
+                    <div class="set-toggle-label">Enable Maintenance Mode</div>
+                    <div class="set-toggle-sub">Show maintenance page to all users except admins</div>
+                </div>
+                <label class="toggle-sw">
+                    <input type="checkbox" name="maintenance_mode" value="1"
+                           <?= ($settings['maintenance_mode'] ?? '0') == '1' ? 'checked' : '' ?>>
+                    <div class="toggle-track" style="<?= ($settings['maintenance_mode'] ?? '0') == '1' ? 'background:#D97706' : '' ?>"></div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save / Cancel buttons -->
+    <div style="display:flex;justify-content:flex-end;gap:10px;padding-bottom:4px">
+        <button type="button" onclick="location.href='?tab=settings'" class="btn btn-outline">
+            <span class="material-icons-round">undo</span>Reset
+        </button>
+        <button type="submit" class="btn btn-purple" id="settingsSaveBtn">
+            <span class="material-icons-round">save</span>Save Settings
+        </button>
+    </div>
+
+</form>
+
+<!-- ── System Tools ───────────────────────────── -->
+<div class="set-card" style="margin-top:8px">
+    <div class="set-card-hd">
+        <div class="set-card-ico" style="background:var(--canvas)">
+            <span class="material-icons-round" style="color:var(--ink-faint)">build</span>
+        </div>
+        <div>
+            <div class="set-card-title">System Tools</div>
+            <div class="set-card-sub">Database management and cache utilities</div>
+        </div>
+    </div>
+    <div class="set-card-body" style="padding-bottom:10px">
+        <div class="set-action-row">
+            <div class="set-card-ico" style="background:#EFF6FF">
+                <span class="material-icons-round" style="color:#2563EB">cloud_download</span>
+            </div>
+            <div class="set-action-info">
+                <div class="set-action-title">Database Backup</div>
+                <div class="set-action-desc">Create a downloadable backup of your entire database</div>
+            </div>
+            <button onclick="settingsBackup()" class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;flex-shrink:0">
+                <span class="material-icons-round">backup</span>Create Backup
+            </button>
+        </div>
+        <div class="set-action-row">
+            <div class="set-card-ico" style="background:#FFF7ED">
+                <span class="material-icons-round" style="color:#EA580C">cached</span>
+            </div>
+            <div class="set-action-info">
+                <div class="set-action-title">Clear System Cache</div>
+                <div class="set-action-desc">Flush cached data to free up space and refresh content</div>
+            </div>
+            <button onclick="settingsClearCache()" class="btn btn-sm" style="background:#FFF7ED;color:#EA580C;border:1px solid #FED7AA;flex-shrink:0">
+                <span class="material-icons-round">delete_sweep</span>Clear Cache
             </button>
         </div>
     </div>
+</div>
 
-    <!-- Clear Cache -->
-    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
-        <div class="p-6 border-b">
-            <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                <span class="material-icons text-orange-600 mr-2">cached</span>
-                Clear Cache
-            </h3>
-        </div>
-        <div class="p-6">
-            <p class="text-gray-600 mb-4">Clear system cache to free up space and refresh data.</p>
-            <button onclick="clearCache()" 
-                class="action-btn px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl transition-all shadow-lg font-medium">
-                <span class="material-icons text-sm align-middle mr-2">delete_sweep</span>
-                Clear Cache
-            </button>
-        </div>
-    </div>
-</section>
+</div><!-- end padding shell -->
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Settings Form Submit
-    document.getElementById('settingsForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        
-        try {
-            const response = await fetch('actions/save_settings.php', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showNotification('Settings saved successfully!', 'success');
-            } else {
-                showNotification(data.message || 'Failed to save settings', 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showNotification('An error occurred. Please try again.', 'error');
+document.getElementById('settingsForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('settingsSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-icons-round" style="animation:spin .8s linear infinite">refresh</span>Saving…';
+    try {
+        const res  = await fetch('actions/save_settings.php', { method: 'POST', body: new FormData(e.target) });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Settings saved successfully!', 'success');
+        } else {
+            showToast(data.message || 'Failed to save settings', 'error');
         }
-    });
+    } catch (err) {
+        showToast('An error occurred. Please try again.', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-icons-round">save</span>Save Settings';
 });
 
-// Backup Database
-async function backupDatabase() {
-    if (!confirm('Create a database backup? This may take a few moments.')) {
-        return;
-    }
-    
+async function settingsBackup() {
+    if (!confirm('Create a database backup? This may take a few moments.')) return;
+    const btn = event.target.closest('button');
+    btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="animation:spin .8s linear infinite">refresh</span>Creating…';
     try {
-        const response = await fetch('actions/backup_database.php', {
-            method: 'POST'
-        });
-        
-        const data = await response.json();
-        
+        const res  = await fetch('actions/backup_database.php', { method: 'POST' });
+        const data = await res.json();
         if (data.success) {
-            showNotification('Database backup created successfully!', 'success');
-            if (data.download_url) {
-                window.open(data.download_url, '_blank');
-            }
+            showToast('Database backup created successfully!', 'success');
+            if (data.download_url) window.open(data.download_url, '_blank');
         } else {
-            showNotification(data.message || 'Failed to create backup', 'error');
+            showToast(data.message || 'Failed to create backup', 'error');
         }
-    } catch (error) {
-        console.error('Error:', error);
-        showNotification('An error occurred. Please try again.', 'error');
-    }
+    } catch (err) { showToast('An error occurred. Please try again.', 'error'); }
+    btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">backup</span>Create Backup';
 }
 
-// Clear Cache
-async function clearCache() {
-    if (!confirm('Clear all cache? This action cannot be undone.')) {
-        return;
-    }
-    
+async function settingsClearCache() {
+    if (!confirm('Clear all cache? This action cannot be undone.')) return;
+    const btn = event.target.closest('button');
+    btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="animation:spin .8s linear infinite">refresh</span>Clearing…';
     try {
-        const response = await fetch('actions/clear_cache.php', {
-            method: 'POST'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('Cache cleared successfully!', 'success');
-        } else {
-            showNotification(data.message || 'Failed to clear cache', 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showNotification('An error occurred. Please try again.', 'error');
-    }
+        const res  = await fetch('actions/clear_cache.php', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.success ? 'Cache cleared successfully!' : (data.message || 'Failed to clear cache'), data.success ? 'success' : 'error');
+    } catch (err) { showToast('An error occurred. Please try again.', 'error'); }
+    btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">delete_sweep</span>Clear Cache';
 }
 </script>

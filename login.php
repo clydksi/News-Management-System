@@ -52,10 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isLockedOut) {
                 $update = $pdo->prepare("UPDATE users SET is_active = 1 WHERE id = ?");
                 $update->execute([$user['id']]);
 
-                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_id']       = $user['id'];
                 $_SESSION['department_id'] = $user['department_id'];
-                $_SESSION['role'] = $user['role'];
-                $_SESSION['username'] = $user['username'];
+                $_SESSION['dept_id']       = $user['department_id'];  // used by access_control.php
+                $_SESSION['view_scope']    = $user['view_scope'] ?? 'own';
+                $_SESSION['role']          = $user['role'];
+                $_SESSION['username']      = $user['username'];
 
                 if (in_array($user['role'], ['admin', 'superadmin'])) {
                     header("Location: admin/admin_dashboard.php");

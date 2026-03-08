@@ -3,7 +3,8 @@ session_start();
 require 'db.php';
 require 'csrf.php';
 
-$error = '';
+$error   = '';
+$warning = '';
 
 // --- Rate limiting ---
 $maxAttempts = 5;

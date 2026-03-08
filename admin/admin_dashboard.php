@@ -258,8 +258,9 @@ if ($activeTab === 'analytics') {
 <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>"/>
 <title>News Admin Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>tailwind.config={corePlugins:{preflight:false}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 <style>
 /* ════════════════════════════════════════════
    DESIGN TOKENS — matches purple editorial suite

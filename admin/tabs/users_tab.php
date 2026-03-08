@@ -12,8 +12,9 @@
 
 /* Filter bar */
 .usr-filter-bar{display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px;background:var(--canvas);border-bottom:1px solid var(--border)}
-.usr-filter-bar .form-input,.usr-filter-bar .form-select{height:36px;font-size:12px;padding:0 10px}
+.usr-filter-bar .form-input,.usr-filter-bar .form-select{height:36px;font-size:12px;padding:0 10px;width:auto}
 .usr-filter-bar .form-select{padding-right:28px}
+.usr-filter-bar > div{flex:1;min-width:160px}
 
 /* Bulk action bar */
 .bulk-bar{

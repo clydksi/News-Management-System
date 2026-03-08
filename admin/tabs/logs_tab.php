@@ -3,8 +3,9 @@
 .log-action-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .log-action-ico .material-icons-round{font-size:15px!important}
 .log-filter-bar{display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px;background:var(--canvas);border-bottom:1px solid var(--border)}
-.log-filter-bar .form-input,.log-filter-bar .form-select{height:36px;font-size:12px;padding:0 10px}
+.log-filter-bar .form-input,.log-filter-bar .form-select{height:36px;font-size:12px;padding:0 10px;width:auto}
 .log-filter-bar .form-select{padding-right:28px}
+.log-filter-bar > div:first-of-type{flex:1;min-width:160px}
 .log-count-chip{padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;font-family:'Fira Code',monospace;background:var(--purple-light);color:var(--purple)}
 </style>
 

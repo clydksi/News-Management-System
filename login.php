@@ -376,7 +376,6 @@ $savedUsernameForResend = $savedUsernameForResend ?? $savedUsername;
                 <span class="material-symbols-outlined text-amber-400 text-base" style="font-variation-settings:'FILL' 1">star</span>
                 <?php endfor; ?>
             </div>
-        <?php endif; ?>
 
         <form method="post" id="loginForm">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">

@@ -164,6 +164,29 @@ if ($activeTab === 'analytics') {
     $s = $pdo->prepare("SELECT COUNT(*) FROM news n WHERE DATE(created_at) = CURDATE() AND {$dw_n}"); $s->execute($dp_n); $todayArticles = $s->fetchColumn();
     $s = $pdo->prepare("SELECT COUNT(*) FROM news n WHERE YEARWEEK(created_at,1) = YEARWEEK(CURDATE(),1) AND {$dw_n}"); $s->execute($dp_n); $weekArticles = $s->fetchColumn();
     $s = $pdo->prepare("SELECT COUNT(*) FROM news n WHERE YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE()) AND {$dw_n}"); $s->execute($dp_n); $monthArticles = $s->fetchColumn();
+    // Pending approval count + queue
+    $pendingApprovalCount = 0;
+    $pendingArticles = [];
+    try {
+        $s = $pdo->prepare("SELECT COUNT(*) FROM news n WHERE n.pending_approval = 1 AND {$dw_n}");
+        $s->execute($dp_n);
+        $pendingApprovalCount = (int)$s->fetchColumn();
+    } catch (PDOException $e) {}
+    try {
+        $s = $pdo->prepare(
+            "SELECT n.id, n.title, n.created_at,
+                    u.username AS author, d.name AS department, c.name AS category
+             FROM news n
+             LEFT JOIN users u ON n.created_by = u.id
+             LEFT JOIN departments d ON n.department_id = d.id
+             LEFT JOIN categories c ON n.category_id = c.id
+             WHERE n.pending_approval = 1 AND {$dw_n}
+             ORDER BY n.created_at ASC
+             LIMIT 50"
+        );
+        $s->execute($dp_n);
+        $pendingArticles = $s->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {}
     $stmt = $pdo->prepare("SELECT d.id, d.name, COUNT(DISTINCT n.id) AS total_articles, COUNT(DISTINCT CASE WHEN n.is_pushed = 3 THEN n.id END) AS published_articles, COUNT(DISTINCT CASE WHEN n.is_pushed = 2 THEN n.id END) AS headline_articles, COUNT(DISTINCT CASE WHEN n.is_pushed = 1 THEN n.id END) AS edited_articles, COUNT(DISTINCT CASE WHEN n.is_pushed = 0 THEN n.id END) AS draft_articles, COUNT(DISTINCT u.id) AS total_users, COUNT(DISTINCT CASE WHEN u.is_active = 1 THEN u.id END) AS active_users, COUNT(DISTINCT CASE WHEN DATE(n.created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN n.id END) AS articles_this_week, COUNT(DISTINCT CASE WHEN DATE(n.created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN n.id END) AS articles_this_month, MAX(n.created_at) AS last_article_date FROM departments d LEFT JOIN news n ON d.id = n.department_id LEFT JOIN users u ON d.id = u.department_id WHERE {$dw_d} GROUP BY d.id, d.name ORDER BY total_articles DESC");
     $stmt->execute($dp_d); $deptAnalytics = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $stmt = $pdo->prepare("SELECT c.id, c.name, COUNT(n.id) AS article_count, COUNT(CASE WHEN n.is_pushed = 3 THEN 1 END) AS published_count, COUNT(CASE WHEN n.is_pushed = 0 THEN 1 END) AS draft_count, COUNT(CASE WHEN DATE(n.created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) AS recent_count FROM categories c LEFT JOIN news n ON c.id = n.category_id AND {$dw_n} GROUP BY c.id, c.name ORDER BY article_count DESC LIMIT 10");
@@ -915,6 +938,21 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 'use strict';
+
+/* ── Global CSRF: auto-attach X-CSRF-Token to all POST fetch calls ── */
+(function () {
+    const _csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+    const _orig = window.fetch;
+    window.fetch = function (url, opts) {
+        opts = opts || {};
+        if (opts.method && opts.method.toUpperCase() === 'POST') {
+            opts.headers = opts.headers || {};
+            if (!opts.headers['X-CSRF-Token']) opts.headers['X-CSRF-Token'] = _csrf;
+        }
+        return _orig.call(this, url, opts);
+    };
+})();
+
 
 /* ─── Dark mode ─────────────────────────────────────────── */
 function toggleDark() {

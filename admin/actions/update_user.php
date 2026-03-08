@@ -1,101 +1,63 @@
 <?php
 session_start();
 require dirname(__DIR__, 2) . '/db.php';
+require dirname(__DIR__, 2) . '/csrf.php';
 
 header('Content-Type: application/json');
 
-// Security: Check if user is logged in and has admin privileges
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'superadmin'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
-    exit;
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']); exit;
 }
 
-// Validate and sanitize input
-$userId = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
-$username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
-$password = $_POST['password'] ?? '';
-$departmentId = filter_input(INPUT_POST, 'department_id', FILTER_VALIDATE_INT);
-$role = filter_input(INPUT_POST, 'role', FILTER_SANITIZE_STRING);
+csrf_verify();
+
+$userId   = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+$username = trim($_POST['username']      ?? '');
+$password = $_POST['password']           ?? '';
+$deptId   = intval($_POST['department_id'] ?? 0);
+$role     = trim($_POST['role']          ?? '');
 $isActive = isset($_POST['is_active']) ? 1 : 0;
+$viewScope = trim($_POST['view_scope']   ?? 'own');
 
-// Validation
-if (!$userId || empty($username) || empty($departmentId) || empty($role)) {
-    echo json_encode(['success' => false, 'message' => 'All fields are required']);
-    exit;
+if (!$userId || empty($username) || empty($deptId) || empty($role)) {
+    echo json_encode(['success' => false, 'message' => 'All required fields must be filled']); exit;
 }
 
-// Validate role
 $allowedRoles = ['user', 'admin'];
-if ($_SESSION['role'] === 'superadmin') {
-    $allowedRoles[] = 'superadmin';
+if ($_SESSION['role'] === 'superadmin') $allowedRoles[] = 'superadmin';
+if (!in_array($role, $allowedRoles)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid role selected']); exit;
 }
 
-if (!in_array($role, $allowedRoles)) {
-    echo json_encode(['success' => false, 'message' => 'Invalid role selected']);
-    exit;
-}
+if (!in_array($viewScope, ['own', 'granted', 'all'])) $viewScope = 'own';
 
 try {
-    // Check if username already exists for other users
-    $checkStmt = $pdo->prepare("SELECT id FROM users WHERE username = :username AND id != :id");
-    $checkStmt->execute([':username' => $username, ':id' => $userId]);
-    
-    if ($checkStmt->rowCount() > 0) {
-        echo json_encode(['success' => false, 'message' => 'Username already exists']);
-        exit;
+    $dup = $pdo->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+    $dup->execute([$username, $userId]);
+    if ($dup->fetch()) {
+        echo json_encode(['success' => false, 'message' => 'Username already in use by another account']); exit;
     }
-    
-    // Build update query
+
     if (!empty($password)) {
-        // Update with new password
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("
-            UPDATE users 
-            SET username = :username, 
-                password = :password, 
-                department_id = :department_id, 
-                role = :role, 
-                is_active = :is_active
-            WHERE id = :id
-        ");
-        
-        $result = $stmt->execute([
-            ':username' => $username,
-            ':password' => $hashedPassword,
-            ':department_id' => $departmentId,
-            ':role' => $role,
-            ':is_active' => $isActive,
-            ':id' => $userId
-        ]);
+        if (strlen($password) < 8) {
+            echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters']); exit;
+        }
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $pdo->prepare("UPDATE users SET username=?, password=?, department_id=?, role=?, view_scope=?, is_active=? WHERE id=?")
+            ->execute([$username, $hash, $deptId, $role, $viewScope, $isActive, $userId]);
     } else {
-        // Update without changing password
-        $stmt = $pdo->prepare("
-            UPDATE users 
-            SET username = :username, 
-                department_id = :department_id, 
-                role = :role, 
-                is_active = :is_active
-            WHERE id = :id
-        ");
-        
-        $result = $stmt->execute([
-            ':username' => $username,
-            ':department_id' => $departmentId,
-            ':role' => $role,
-            ':is_active' => $isActive,
-            ':id' => $userId
-        ]);
+        $pdo->prepare("UPDATE users SET username=?, department_id=?, role=?, view_scope=?, is_active=? WHERE id=?")
+            ->execute([$username, $deptId, $role, $viewScope, $isActive, $userId]);
     }
-    
-    if ($result) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'User updated successfully'
-        ]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to update user']);
-    }
+
+    try {
+        $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address, created_at) VALUES (?, 'update', ?, ?, NOW())")
+            ->execute([$_SESSION['user_id'], "Updated user '$username' (role: $role, scope: $viewScope)", $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0']);
+    } catch (PDOException $e) {}
+
+    echo json_encode(['success' => true, 'message' => "User '$username' updated successfully"]);
+
 } catch (PDOException $e) {
-    error_log("Database error: " . $e->getMessage());
+    error_log("Update user error: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Database error occurred']);
 }

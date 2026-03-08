@@ -1,12 +1,15 @@
 <?php
 session_start();
-require '../../db.php';
+require dirname(__DIR__, 2) . '/db.php';
+require dirname(__DIR__, 2) . '/csrf.php';
 
 // Check authentication and permissions
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'superadmin'])) {
     http_response_code(403);
     exit('Unauthorized');
 }
+
+csrf_verify();
 
 try {
     // Fetch all logs

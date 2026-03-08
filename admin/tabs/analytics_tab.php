@@ -9,7 +9,7 @@
 .an-card-sub{font-size:10px;color:var(--ink-faint);font-family:'Fira Code',monospace;margin-top:2px}
 
 /* Quick-stat tiles */
-.qs-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+.qs-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px}
 @media(max-width:900px){.qs-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:540px){.qs-grid{grid-template-columns:repeat(2,1fr)}}
 .qs-tile{
@@ -73,6 +73,19 @@
 /* two-col bottom */
 .bottom-duo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
 @media(max-width:860px){.bottom-duo{grid-template-columns:1fr}}
+
+/* Pending approval queue */
+.pq-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:9px;background:var(--canvas);border:1px solid var(--border);transition:border-color .15s}
+.pq-row:hover{border-color:#EF4444}
+.pq-title{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.pq-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:10px;color:var(--ink-faint);font-family:'Fira Code',monospace;margin-top:3px}
+.pq-meta .material-icons-round{font-size:11px!important}
+.pq-actions{display:flex;gap:6px;flex-shrink:0}
+.pq-btn{border:none;border-radius:7px;font-size:11px;font-weight:600;padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s}
+.pq-btn .material-icons-round{font-size:13px!important}
+.pq-approve{background:#ECFDF5;color:#059669}.pq-approve:hover{background:#059669;color:#fff}
+.pq-reject{background:#FFF1F2;color:#DC2626}.pq-reject:hover{background:#DC2626;color:#fff}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.5}}
 </style>
 
 <!-- ── Quick Stats Tiles ─────────────────────────────────── -->
@@ -119,10 +132,23 @@
     <div class="qs-tile t-amber">
         <div class="qs-tile-top">
             <div class="qs-ico ic-amber"><span class="material-icons-round">draft</span></div>
-            <span class="qs-tag" style="background:#FFFBEB;color:#92400E">Pending</span>
+            <span class="qs-tag" style="background:#FFFBEB;color:#92400E">Drafts</span>
         </div>
         <div class="qs-val"><?= number_format($draftArticles) ?></div>
         <div class="qs-lbl">Drafts</div>
+    </div>
+
+    <div class="qs-tile t-red" style="cursor:pointer" onclick="document.getElementById('pending-queue').scrollIntoView({behavior:'smooth'})">
+        <div class="qs-tile-top">
+            <div class="qs-ico ic-red"><span class="material-icons-round">pending_actions</span></div>
+            <?php if ($pendingApprovalCount > 0): ?>
+            <span class="qs-tag" style="background:#FFF1F2;color:#B91C1C;animation:pulse-dot 1.5s infinite">Urgent</span>
+            <?php else: ?>
+            <span class="qs-tag" style="background:#FFF1F2;color:#9CA3AF">Review</span>
+            <?php endif; ?>
+        </div>
+        <div class="qs-val" style="<?= $pendingApprovalCount > 0 ? 'color:#DC2626' : '' ?>"><?= number_format($pendingApprovalCount) ?></div>
+        <div class="qs-lbl">Pending Review</div>
     </div>
 
 </div>
@@ -360,279 +386,172 @@
 
 </div>
 
-</div><!-- end padding shell -->
-
-<!-- ── Bottom Grid: Authors + Activity ───────────────────────────── -->
-<div class="an-bottom-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 20px 20px">
-
-    <!-- Top Contributors -->
-    <div class="an-card">
-        <div class="an-card-hd">
-            <div class="an-card-hd-l">
-                <div class="an-card-icon" style="background:#FFFBEB">
-                    <span class="material-icons-round" style="color:#D97706">emoji_events</span>
-                </div>
-                <div>
-                    <div class="an-card-title">Top Contributors</div>
-                    <div class="an-card-sub">By total article count</div>
-                </div>
+<!-- ── Pending Approval Queue ──────────────────────────── -->
+<div id="pending-queue" class="an-card" style="margin-top:16px;margin-bottom:16px">
+    <div class="an-card-hd">
+        <div>
+            <div class="an-card-title">
+                <span class="material-icons-round" style="color:#DC2626">pending_actions</span>
+                Pending Approval Queue
             </div>
+            <div class="an-card-sub">Articles submitted by users for headline promotion</div>
         </div>
-        <div class="an-card-body" style="max-height:420px;overflow-y:auto">
-            <?php if (!empty($topAuthors)): ?>
-            <?php foreach ($topAuthors as $idx => $author):
-                $rankClass = match(true) { $idx===0=>'rank-1', $idx===1=>'rank-2', $idx===2=>'rank-3', default=>'rank-n' };
-                $rankLabel = $idx < 3 ? ['🥇','🥈','🥉'][$idx] : '#'.($idx+1);
-            ?>
-            <div class="author-row">
-                <div class="author-rank <?= $rankClass ?>"><?= $rankLabel ?></div>
-                <div class="author-avatar"><?= strtoupper(substr($author['username'],0,1)) ?></div>
-                <div class="author-info">
-                    <div class="author-name"><?= e($author['username']) ?></div>
-                    <div class="author-dept">
-                        <span class="material-icons-round">business</span>
-                        <?= e($author['department'] ?? 'No dept') ?>
-                    </div>
-                </div>
-                <div class="author-stats">
-                    <span class="badge badge-purple" style="font-size:9px;flex-shrink:0"><?= $author['recent_count'] ?> / mo</span>
-                    <div class="author-count">
-                        <div class="author-count-val"><?= number_format($author['article_count']) ?></div>
-                        <div class="author-count-lbl">articles</div>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-            <?php else: ?>
-            <div class="empty-state" style="padding:40px 20px">
-                <div class="empty-icon"><span class="material-icons-round">people_outline</span></div>
-                <div class="empty-sub">No contributor data yet.</div>
-            </div>
-            <?php endif; ?>
-        </div>
+        <?php if ($pendingApprovalCount > 0): ?>
+        <span class="badge" style="background:#FFF1F2;color:#B91C1C;border-color:#FECACA;font-size:11px;padding:4px 10px">
+            <?= $pendingApprovalCount ?> awaiting
+        </span>
+        <?php endif; ?>
     </div>
-
-    <!-- Recent Activity -->
-    <div class="an-card">
-        <div class="an-card-hd">
-            <div class="an-card-hd-l">
-                <div class="an-card-icon" style="background:#EFF6FF">
-                    <span class="material-icons-round" style="color:#2563EB">schedule</span>
+    <div class="an-card-body" style="padding-top:14px">
+        <?php if (!empty($pendingArticles)): ?>
+        <div style="display:flex;flex-direction:column;gap:7px" id="pq-list">
+        <?php foreach ($pendingArticles as $pa): ?>
+        <div class="pq-row" id="pq-item-<?= $pa['id'] ?>">
+            <div style="width:34px;height:34px;border-radius:8px;background:#FFF1F2;border:1px solid #FECACA;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <span class="material-icons-round" style="font-size:16px!important;color:#DC2626">pending_actions</span>
+            </div>
+            <div style="flex:1;min-width:0">
+                <div class="pq-title" title="<?= e($pa['title']) ?>"><?= e($pa['title']) ?></div>
+                <div class="pq-meta">
+                    <span style="display:flex;align-items:center;gap:2px"><span class="material-icons-round">person</span><?= e($pa['author'] ?? '—') ?></span>
+                    <span style="color:var(--border-md)">·</span>
+                    <span style="display:flex;align-items:center;gap:2px"><span class="material-icons-round">business</span><?= e($pa['department'] ?? '—') ?></span>
+                    <?php if (!empty($pa['category'])): ?>
+                    <span style="color:var(--border-md)">·</span>
+                    <span style="display:flex;align-items:center;gap:2px"><span class="material-icons-round">label</span><?= e($pa['category']) ?></span>
+                    <?php endif; ?>
+                    <span style="color:var(--border-md)">·</span>
+                    <span style="display:flex;align-items:center;gap:2px"><span class="material-icons-round">schedule</span><?= date('M d, Y g:i A', strtotime($pa['created_at'])) ?></span>
                 </div>
-                <div>
-                    <div class="an-card-title">Recent Activity</div>
-                    <div class="an-card-sub">Latest <?= count($recentActivity ?? []) ?> articles</div>
-                </div>
+            </div>
+            <div class="pq-actions">
+                <button class="pq-btn pq-approve" onclick="pqApprove(<?= $pa['id'] ?>)">
+                    <span class="material-icons-round">check_circle</span>Approve
+                </button>
+                <button class="pq-btn pq-reject" onclick="pqOpenReject(<?= $pa['id'] ?>)">
+                    <span class="material-icons-round">cancel</span>Reject
+                </button>
             </div>
         </div>
-        <div class="an-card-body" style="max-height:420px;overflow-y:auto">
-            <?php if (!empty($recentActivity)):
-                $statusDot = [
-                    'Draft'     => ['#FFF7ED','#F97316','edit_note'],
-                    'Edited'    => ['#ECFDF5','#10B981','rate_review'],
-                    'Headline'  => ['#EFF6FF','#2563EB','push_pin'],
-                    'Published' => ['var(--purple-light)','var(--purple)','check_circle'],
-                ];
-                foreach ($recentActivity as $act):
-                    $s = $statusDot[$act['status_label']] ?? ['var(--canvas)','var(--ink-faint)','article'];
-            ?>
-            <div class="activity-item">
-                <div class="activity-dot" style="background:<?= $s[0] ?>">
-                    <span class="material-icons-round" style="color:<?= $s[1] ?>"><?= $s[2] ?></span>
-                </div>
-                <div style="flex:1;min-width:0">
-                    <div class="activity-title"><?= e($act['title']) ?></div>
-                    <div class="activity-meta">
-                        <span class="activity-meta-item">
-                            <span class="material-icons-round">person</span><?= e($act['author'] ?? '—') ?>
-                        </span>
-                        <span class="activity-meta-item">
-                            <span class="material-icons-round">business</span><?= e($act['department'] ?? '—') ?>
-                        </span>
-                        <?php if (!empty($act['category'])): ?>
-                        <span class="activity-meta-item">
-                            <span class="material-icons-round">label</span><?= e($act['category']) ?>
-                        </span>
-                        <?php endif; ?>
-                        <span class="activity-meta-item">
-                            <span class="material-icons-round">schedule</span><?= date('M d, g:i A', strtotime($act['created_at'])) ?>
-                        </span>
-                    </div>
-                </div>
-                <span class="badge <?= ['Draft'=>'badge-orange','Edited'=>'badge-green','Headline'=>'badge-blue','Published'=>'badge-purple'][$act['status_label']] ?? 'badge-gray' ?>" style="flex-shrink:0;align-self:flex-start">
-                    <?= $act['status_label'] ?>
-                </span>
-            </div>
-            <?php endforeach; ?>
-            <?php else: ?>
-            <div class="empty-state" style="padding:40px 20px">
-                <div class="empty-icon"><span class="material-icons-round">history</span></div>
-                <div class="empty-sub">No recent activity.</div>
-            </div>
-            <?php endif; ?>
+        <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="empty-state" style="padding:40px 20px">
+            <div class="empty-icon"><span class="material-icons-round" style="color:#10B981">check_circle</span></div>
+            <div class="empty-title" style="color:#10B981">All Clear</div>
+            <div class="empty-sub">No articles awaiting approval. Great work!</div>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Reject modal for queue -->
+<div id="pq-reject-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border-radius:14px;padding:28px;width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+            <span class="material-icons-round" style="color:#DC2626;font-size:22px">cancel</span>
+            <span style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--ink)">Reject Submission</span>
+        </div>
+        <p style="font-size:13px;color:var(--ink-faint);margin-bottom:14px">Please provide a reason so the author can improve their article.</p>
+        <textarea id="pq-reject-note" rows="4" placeholder="Enter rejection reason…" style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'Sora',sans-serif;color:var(--ink);background:var(--canvas);resize:vertical;box-sizing:border-box"></textarea>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+            <button onclick="pqCloseReject()" style="border:1px solid var(--border);background:var(--canvas);color:var(--ink-faint);border-radius:8px;padding:8px 18px;font-size:12px;cursor:pointer">Cancel</button>
+            <button onclick="pqSubmitReject()" style="background:#DC2626;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
+                <span class="material-icons-round" style="font-size:14px">cancel</span>Reject
+            </button>
         </div>
     </div>
 </div>
 
+</div><!-- end padding shell -->
+
 
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+/* ── Pending Queue Actions ─────────────────────────────────────── */
+let _pqRejectId = null;
 
-    // ── Shared chart defaults ────────────────────────────────────
-    const fontFam = "'Sora', sans-serif";
-    const monoFam = "'Fira Code', monospace";
-    const isDark  = () => document.documentElement.dataset.theme === 'dark';
-    const gridClr = () => isDark() ? 'rgba(255,255,255,.07)' : 'rgba(60,20,120,.06)';
-    const tickClr = () => isDark() ? '#635D7A' : '#8E89A8';
-    const tooltipBg = 'rgba(19,17,26,.92)';
-
-    const basePlugin = {
-        legend: {
-            position: 'bottom',
-            labels: {
-                padding: 14, color: tickClr(),
-                font: { family: fontFam, size: 11 },
-                usePointStyle: true, pointStyle: 'circle'
-            }
-        },
-        tooltip: {
-            backgroundColor: tooltipBg,
-            padding: 12, cornerRadius: 9,
-            titleFont: { size: 12, family: fontFam },
-            bodyFont:  { size: 11, family: monoFam },
-            titleColor: '#EAE6F8', bodyColor: '#9E98B8',
+function pqApprove(id) {
+    const row = document.getElementById('pq-item-' + id);
+    fetch('../user/function/approve.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=approve&id=' + id
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            if (row) row.style.transition = 'opacity .4s';
+            if (row) { row.style.opacity = '0'; setTimeout(() => row.remove(), 400); }
+            _pqUpdateCount(-1);
+            _pqToast('Article approved and set to Headline ✓', '#059669');
+        } else {
+            _pqToast(d.message || 'Approval failed.', '#DC2626');
         }
-    };
+    })
+    .catch(() => _pqToast('Network error. Please try again.', '#DC2626'));
+}
 
-    const baseScales = {
-        y: {
-            beginAtZero: true,
-            ticks: { color: tickClr, font: { family: monoFam, size: 10 }, stepSize: 1 },
-            grid: { color: gridClr },
-            border: { dash: [3, 3] },
-        },
-        x: {
-            ticks: { color: tickClr, font: { family: fontFam, size: 10 }, maxRotation: 30 },
-            grid: { display: false },
+function pqOpenReject(id) {
+    _pqRejectId = id;
+    document.getElementById('pq-reject-note').value = '';
+    const m = document.getElementById('pq-reject-modal');
+    m.style.display = 'flex';
+    setTimeout(() => document.getElementById('pq-reject-note').focus(), 50);
+}
+function pqCloseReject() {
+    document.getElementById('pq-reject-modal').style.display = 'none';
+    _pqRejectId = null;
+}
+function pqSubmitReject() {
+    const note = document.getElementById('pq-reject-note').value.trim();
+    if (!note) { document.getElementById('pq-reject-note').focus(); return; }
+    const row  = document.getElementById('pq-item-' + _pqRejectId);
+    fetch('../user/function/approve.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=reject&id=' + _pqRejectId + '&note=' + encodeURIComponent(note)
+    })
+    .then(r => r.json())
+    .then(d => {
+        pqCloseReject();
+        if (d.success) {
+            if (row) { row.style.transition = 'opacity .4s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 400); }
+            _pqUpdateCount(-1);
+            _pqToast('Article rejected. Author will be notified.', '#F97316');
+        } else {
+            _pqToast(d.message || 'Rejection failed.', '#DC2626');
         }
-    };
+    })
+    .catch(() => _pqToast('Network error. Please try again.', '#DC2626'));
+}
 
-    // ── Dept Bar Chart ───────────────────────────────────────────
-    const deptCtx = document.getElementById('deptChart');
-    if (deptCtx) {
-        const d = <?= json_encode($deptComparison) ?>;
-        new Chart(deptCtx, {
-            type: 'bar',
-            data: {
-                labels: d.labels,
-                datasets: [
-                    {
-                        label: 'Total Articles',
-                        data: d.articles,
-                        backgroundColor: 'rgba(124,58,237,.75)',
-                        borderColor: '#7C3AED',
-                        borderWidth: 1.5,
-                        borderRadius: 6,
-                        borderSkipped: false,
-                    },
-                    {
-                        label: 'Published',
-                        data: d.published,
-                        backgroundColor: 'rgba(16,185,129,.7)',
-                        borderColor: '#10B981',
-                        borderWidth: 1.5,
-                        borderRadius: 6,
-                        borderSkipped: false,
-                    }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: basePlugin,
-                scales: baseScales,
-            }
-        });
+function _pqUpdateCount(delta) {
+    // Update the tile counter
+    const tileVal = document.querySelector('.qs-tile.t-red .qs-val');
+    if (tileVal) {
+        let n = parseInt(tileVal.textContent.replace(/,/g, ''), 10) + delta;
+        if (n < 0) n = 0;
+        tileVal.textContent = n.toLocaleString();
+        if (n === 0) tileVal.style.color = '';
     }
+    // Show all-clear state if queue is empty
+    const list = document.getElementById('pq-list');
+    if (list && list.children.length === 0) {
+        list.outerHTML = '<div class="empty-state" style="padding:40px 20px"><div class="empty-icon"><span class="material-icons-round" style="color:#10B981">check_circle</span></div><div class="empty-title" style="color:#10B981">All Clear</div><div class="empty-sub">No articles awaiting approval. Great work!</div></div>';
+    }
+}
 
-    // ── Doughnut ─────────────────────────────────────────────────
-    const catCtx = document.getElementById('catChart');
-    if (catCtx) {
-        const c = <?= json_encode($categoryAnalytics) ?>;
-        const palette = [
-            '#7C3AED','#A78BFA','#3B82F6','#60A5FA','#10B981',
-            '#34D399','#F97316','#FBBF24','#EF4444','#F43F5E'
-        ];
-        new Chart(catCtx, {
-            type: 'doughnut',
-            data: {
-                labels: c.map(x => x.name),
-                datasets: [{
-                    data: c.map(x => x.article_count),
-                    backgroundColor: palette,
-                    borderWidth: 3,
-                    borderColor: isDark() ? '#17142A' : '#FFFFFF',
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                cutout: '62%',
-                plugins: {
-                    ...basePlugin,
-                    legend: {
-                        ...basePlugin.legend,
-                        labels: {
-                            ...basePlugin.legend.labels,
-                            boxWidth: 10, boxHeight: 10,
-                            padding: 10,
-                        }
-                    }
-                }
-            }
-        });
-    }
+function _pqToast(msg, color) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:'+color+';color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.25);opacity:0;transition:opacity .3s';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => { t.style.opacity = '1'; setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3200); });
+}
 
-    // ── Trends Line Chart ─────────────────────────────────────────
-    const trendsCtx = document.getElementById('trendsChart');
-    if (trendsCtx) {
-        const t = <?= json_encode($monthlyTrends) ?>;
-        new Chart(trendsCtx, {
-            type: 'line',
-            data: {
-                labels: t.map(x => x.month_label),
-                datasets: [
-                    {
-                        label: 'Total Articles',
-                        data: t.map(x => x.count),
-                        borderColor: '#7C3AED',
-                        backgroundColor: 'rgba(124,58,237,.08)',
-                        fill: true, tension: 0.4, borderWidth: 2.5,
-                        pointRadius: 4, pointBackgroundColor: '#7C3AED',
-                        pointBorderColor: isDark() ? '#17142A' : '#fff',
-                        pointBorderWidth: 2, pointHoverRadius: 6,
-                    },
-                    {
-                        label: 'Published',
-                        data: t.map(x => x.published_count),
-                        borderColor: '#10B981',
-                        backgroundColor: 'rgba(16,185,129,.07)',
-                        fill: true, tension: 0.4, borderWidth: 2.5,
-                        pointRadius: 4, pointBackgroundColor: '#10B981',
-                        pointBorderColor: isDark() ? '#17142A' : '#fff',
-                        pointBorderWidth: 2, pointHoverRadius: 6,
-                    }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'index' },
-                plugins: basePlugin,
-                scales: baseScales,
-            }
-        });
-    }
-});
+// Close reject modal on backdrop click
+document.getElementById('pq-reject-modal')?.addEventListener('click', function(e){ if(e.target===this) pqCloseReject(); });
 </script>
 
 <script>

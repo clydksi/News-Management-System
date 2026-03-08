@@ -1,6 +1,7 @@
 <?php
 session_start();
 require dirname(__DIR__, 2) . '/db.php';
+require dirname(__DIR__, 2) . '/csrf.php';
 
 header('Content-Type: application/json');
 
@@ -9,6 +10,8 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'supe
     echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
     exit;
 }
+
+csrf_verify();
 
 try {
     $id = intval($_POST['id'] ?? 0);

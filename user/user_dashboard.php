@@ -1,7 +1,12 @@
 <?php
 require '../auth.php';
 require '../db.php';
+require '../csrf.php';
 require '../admin/includes/access_control.php';
+
+// Ensure approval columns exist (idempotent — fails silently if already present)
+try { $pdo->exec("ALTER TABLE news ADD COLUMN pending_approval TINYINT(1) NOT NULL DEFAULT 0"); } catch (PDOException $e) {}
+try { $pdo->exec("ALTER TABLE news ADD COLUMN rejection_note TEXT NULL"); } catch (PDOException $e) {}
 
 $visibleDeptIds = getVisibleDepartmentIds($pdo, $_SESSION);
 $isSuperAdmin   = $_SESSION['role'] === 'superadmin';
@@ -12,6 +17,16 @@ $s = $pdo->prepare("SELECT COUNT(*) FROM news n WHERE {$dw_n}"); $s->execute($dp
 $s = $pdo->prepare("SELECT COUNT(*) FROM users u WHERE u.is_active = 1"); $s->execute(); $activeUsers = $s->fetchColumn();
 $totalCategories = $pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
 $pendingReviews  = $pdo->query("SELECT COUNT(*) FROM departments")->fetchColumn();
+
+// Pending approval count (for admins)
+$pendingApprovalCount = 0;
+if ($isAdmin) {
+    try {
+        $s = $pdo->prepare("SELECT COUNT(*) FROM news n WHERE {$dw_n} AND n.pending_approval = 1");
+        $s->execute($dp_n);
+        $pendingApprovalCount = (int)$s->fetchColumn();
+    } catch (PDOException $e) { /* column not yet created */ }
+}
 
 $itemsPerPage = isset($_GET['per_page']) ? max(9, min(60, intval($_GET['per_page']))) : 9;
 $currentPage  = isset($_GET['page'])     ? max(1, intval($_GET['page']))              : 1;
@@ -39,6 +54,8 @@ if ($filterStatus !== '')      $activeFilters++;
 $baseQuery = "
     SELECT n.*, u.username, d.name AS dept_name, c.name AS category_name,
            n.thumbnail, n.parent_article_id, n.is_update, n.update_type, n.update_number,
+           COALESCE(n.pending_approval, 0) AS pending_approval,
+           n.rejection_note,
            (SELECT COUNT(*) FROM news WHERE parent_article_id = n.id) AS update_count,
            (SELECT MAX(created_at) FROM news WHERE parent_article_id = n.id) AS latest_update_time,
            parent.title AS parent_title, parent.id AS parent_id
@@ -159,6 +176,7 @@ function getArticleTypeBadge($a) {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>"/>
 <title>Articles Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Sora:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
@@ -477,6 +495,47 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
 .stt-btn.show{opacity:1;pointer-events:all}
 .stt-btn:hover{transform:translateY(-2px)}
 .stt-btn .material-icons-round{font-size:20px!important}
+/* ── Bulk actions ── */
+.bulk-bar{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--purple-dark);border-radius:var(--r);margin-bottom:14px;flex-wrap:wrap;animation:pageIn .2s ease}
+.bulk-bar.show{display:flex}
+.bulk-cnt{font-size:13px;font-weight:600;color:white;font-family:'Fira Code',monospace;margin-right:4px}
+.bulk-sep{width:1px;height:20px;background:rgba(255,255,255,.2)}
+.bulk-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r-sm);font-family:'Sora',sans-serif;font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.bulk-btn .material-icons-round{font-size:14px!important}
+.bulk-btn-del{background:#EF4444;color:white}
+.bulk-btn-del:hover{background:#DC2626}
+.bulk-btn-arc{background:rgba(255,255,255,.15);color:white}
+.bulk-btn-arc:hover{background:rgba(255,255,255,.25)}
+.bulk-btn-push{background:#10B981;color:white}
+.bulk-btn-push:hover{background:#059669}
+.bulk-btn-hl{background:#3B82F6;color:white}
+.bulk-btn-hl:hover{background:#2563EB}
+.bulk-clear{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:12px;font-family:'Sora',sans-serif;display:flex;align-items:center;gap:4px;transition:color .15s}
+.bulk-clear:hover{color:white}
+.bulk-clear .material-icons-round{font-size:14px!important}
+.a-cb{position:absolute;top:8px;left:8px;z-index:5;width:20px;height:20px;cursor:pointer;accent-color:var(--purple)}
+.a-card{position:relative}
+/* ── Approval badges ── */
+.pend-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;font-family:'Fira Code',monospace}
+.rej-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;background:#FFF1F2;border:1px solid #FECDD3;color:#9F1239;font-family:'Fira Code',monospace}
+.rej-badge .material-icons-round,.pend-badge .material-icons-round{font-size:11px!important}
+.rej-note{font-size:11px;color:#9F1239;padding:6px 10px;background:#FFF1F2;border-radius:var(--r-xs);margin-top:6px;display:flex;gap:5px;align-items:flex-start}
+.rej-note .material-icons-round{font-size:13px!important;flex-shrink:0;margin-top:1px}
+/* ── Pending approval banner ── */
+.pend-banner{background:linear-gradient(135deg,#FEF3C7,#FDE68A);border:1px solid #FCD34D;border-radius:var(--r);padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pend-banner .material-icons-round{color:#92400E;font-size:20px!important}
+.pend-banner-text{flex:1;font-size:13px;font-weight:500;color:#78350F}
+.pend-banner strong{font-weight:700}
+.pend-banner a{color:#92400E;font-weight:600;text-decoration:none;padding:5px 12px;border-radius:var(--r-sm);background:rgba(0,0,0,.08);transition:background .15s}
+.pend-banner a:hover{background:rgba(0,0,0,.15)}
+/* ── Approve/Reject buttons ── */
+.ab-apr{background:#ECFDF5;border:1px solid #6EE7B7;color:#065F46}
+.ab-apr:hover{background:#D1FAE5}
+.ab-rej{background:#FFF1F2;border:1px solid #FECDD3;color:#9F1239}
+.ab-rej:hover{background:#FFE4E6}
+/* ── Rejection modal ── */
+.rej-modal-note{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--canvas);font-family:'Sora',sans-serif;font-size:13px;color:var(--ink);outline:none;resize:vertical;min-height:80px;transition:border-color .15s}
+.rej-modal-note:focus{border-color:var(--purple);box-shadow:0 0 0 3px var(--purple-glow)}
 @media print{.mobile-header,.sidebar,.topbar,.msbar,.stt-btn,.toast-stack,.ld-overlay,.a-acts,.sec-acts,.pg-bar{display:none!important}body{overflow:auto}.app-body{display:block}.main{overflow:visible}.scroll-area{padding:0;overflow:visible}.a-card{break-inside:avoid;margin-bottom:16px}}
 </style>
 </head>
@@ -547,6 +606,7 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
             </div>
         </nav>
         <div class="sb-foot">
+            <a href="profile.php" class="sb-link"><span class="material-icons-round">account_circle</span>My Profile</a>
             <button class="sb-link" onclick="openSettingsModal()"><span class="material-icons-round">lock</span>Change Password</button>
             <button class="sb-link" onclick="toggleDark()"><span class="material-icons-round" id="darkIcon">dark_mode</span><span id="darkLabel">Dark Mode</span></button>
             <a href="../logout.php" class="sb-link" style="color:#FCA5A5"><span class="material-icons-round" style="color:#F87171">logout</span>Logout</a>
@@ -610,9 +670,32 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
                     <button class="ref-btn" id="refreshArticles"><span class="material-icons-round">refresh</span></button>
                 </div>
                 <div class="sec-acts">
+                    <button onclick="selectAllArticles()" class="btn btn-outline" id="selectAllBtn" title="Select all articles on this page"><span class="material-icons-round">check_box</span><span id="selectAllLabel">Select</span></button>
+                    <a href="function/export.php?<?= e(http_build_query(array_filter($_GET))) ?>" class="btn btn-outline"><span class="material-icons-round">download</span>Export CSV</a>
                     <button onclick="openCategoryModal()" class="btn btn-outline"><span class="material-icons-round">label</span>Categories</button>
                     <button onclick="window.location.href='function/create.php'" class="btn btn-purple"><span class="material-icons-round">add_circle</span>New Article</button>
                 </div>
+            </div>
+
+            <?php if ($isAdmin && $pendingApprovalCount > 0): ?>
+            <div class="pend-banner">
+                <span class="material-icons-round">pending_actions</span>
+                <div class="pend-banner-text"><strong><?= $pendingApprovalCount ?> article<?= $pendingApprovalCount > 1 ? 's' : '' ?></strong> pending your approval.</div>
+                <a href="?filter_pending=1">Review Now</a>
+            </div>
+            <?php endif; ?>
+
+            <!-- Bulk Action Bar -->
+            <div class="bulk-bar" id="bulkBar">
+                <span class="bulk-cnt" id="bulkCount">0 selected</span>
+                <div class="bulk-sep"></div>
+                <button class="bulk-btn bulk-btn-push" onclick="doBulkAction('push_edited')"><span class="material-icons-round">rocket_launch</span>Mark Edited</button>
+                <?php if ($isAdmin): ?>
+                <button class="bulk-btn bulk-btn-hl" onclick="doBulkAction('push_headline')"><span class="material-icons-round">star</span>Headline</button>
+                <?php endif; ?>
+                <button class="bulk-btn bulk-btn-arc" onclick="doBulkAction('archive')"><span class="material-icons-round">inventory_2</span>Archive</button>
+                <button class="bulk-btn bulk-btn-del" onclick="doBulkAction('delete')"><span class="material-icons-round">delete</span>Delete</button>
+                <button class="bulk-clear" onclick="clearSelection()"><span class="material-icons-round">close</span>Clear</button>
             </div>
 
             <?php if(empty($paginatedNews)): ?>
@@ -633,7 +716,8 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
                 elseif(isset($at['isLive'])&&$at['isLive']) $bc.=' lb';
                 elseif($at&&$at['type']==='parent') $bc.=' pb';
             ?>
-            <div class="a-card">
+            <div class="a-card" data-id="<?= $article['id'] ?>">
+                <input type="checkbox" class="a-cb article-cb" value="<?= $article['id'] ?>" onchange="updateBulkBar()" title="Select article">
                 <div class="a-thumb">
                     <img src="<?= e(getThumbnailUrl($article['thumbnail'])) ?>" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'a-ph\'><span class=\'material-icons-round\'>image</span></div><div class=\'a-veil\'></div>'"/>
                     <div class="a-veil"></div>
@@ -659,8 +743,13 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
                     <div class="a-tags">
                         <span class="a-tag t-cat"><span class="material-icons-round">label</span><?= e($article['category_name']?:'Uncategorized') ?></span>
                         <?php if($at): ?><span class="a-tag <?= $article['is_update']==1?'t-upd':'t-par' ?>"><span class="material-icons-round"><?= $at['icon'] ?></span><?= e($at['label']) ?></span><?php endif; ?>
+                        <?php if(!empty($article['pending_approval'])): ?><span class="pend-badge"><span class="material-icons-round">pending</span>Pending Review</span><?php endif; ?>
+                        <?php if(empty($article['pending_approval']) && !empty($article['rejection_note'])): ?><span class="rej-badge"><span class="material-icons-round">cancel</span>Rejected</span><?php endif; ?>
                     </div>
                     <div class="a-title" onclick="openModal('modal-<?= $article['id'] ?>')"><?= e($article['title']) ?></div>
+                    <?php if(empty($article['pending_approval']) && !empty($article['rejection_note'])): ?>
+                    <div class="rej-note"><span class="material-icons-round">info</span><?= e($article['rejection_note']) ?></div>
+                    <?php endif; ?>
                     <div class="a-prev"><?= e(strip_tags($article['content'])) ?></div>
                     <div class="a-meta">
                         <div class="a-mi"><div class="a-mi-icon" style="background:var(--purple-light)"><span class="material-icons-round" style="color:var(--purple)">person</span></div><div><div class="a-mi-v"><?= e($article['username']?:'—') ?></div><div class="a-mi-s">Author</div></div></div>
@@ -680,8 +769,20 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
                         <?php if($article['is_pushed']==0): ?>
                         <button class="ab ab-am ab-full" onclick="window.location.href='function/push.php?id=<?= $article['id'] ?>&to=1'"><span class="material-icons-round">rocket_launch</span>Push to Edited</button>
                         <?php elseif($article['is_pushed']==1): ?>
+                        <?php if(!empty($article['pending_approval'])): ?>
+                        <button class="ab ab-gy ab-full" disabled title="Waiting for admin approval"><span class="material-icons-round">hourglass_top</span>Awaiting Approval</button>
+                        <?php elseif($isAdmin): ?>
                         <button class="ab ab-in" onclick="window.location.href='function/push.php?id=<?= $article['id'] ?>&to=2'"><span class="material-icons-round">star</span>Headlines</button>
+                        <?php else: ?>
+                        <button class="ab ab-in ab-full" onclick="window.location.href='function/push.php?id=<?= $article['id'] ?>&to=2'"><span class="material-icons-round">send</span>Submit for Review</button>
+                        <?php endif; ?>
+                        <?php if(!$isAdmin || !empty($article['pending_approval'])): /* admins: revert shown below */ endif; ?>
+                        <?php if(!empty($article['pending_approval']) && $isAdmin): ?>
+                        <button class="ab ab-apr" onclick="approveArticle(<?= $article['id'] ?>)"><span class="material-icons-round">check_circle</span>Approve</button>
+                        <button class="ab ab-rej" onclick="openRejectModal(<?= $article['id'] ?>)"><span class="material-icons-round">cancel</span>Reject</button>
+                        <?php elseif(empty($article['pending_approval'])): ?>
                         <button class="ab ab-gy" onclick="confirmRevert(<?= $article['id'] ?>,0)"><span class="material-icons-round">undo</span>Revert</button>
+                        <?php endif; ?>
                         <?php elseif($article['is_pushed']==2): ?>
                         <button class="ab ab-pu" onclick="if(confirm('Publish this article?')){const r=encodeURIComponent(window.location.href);window.location.href='public/simple_publish.php?id=<?= $article['id'] ?>&to=1&return_url='+r;}"><span class="material-icons-round">publish</span>Publish</button>
                         <button class="ab ab-gy" onclick="confirmRevert(<?= $article['id'] ?>,1)"><span class="material-icons-round">undo</span>Revert</button>
@@ -845,6 +946,22 @@ body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);hei
         <div class="m-foot"><button onclick="closeSettingsModal()" class="btn btn-outline">Cancel</button><button onclick="changePassword()" class="btn btn-purple"><span class="material-icons-round">save</span>Change Password</button></div>
     </div>
 </div>
+<!-- Reject Article Modal -->
+<div class="modal-bg" id="rejectModal">
+    <div class="modal-box" style="max-width:440px">
+        <div class="m-hd">
+            <div class="m-hi"><div class="m-hi-icon" style="background:#FFF1F2"><span class="material-icons-round" style="color:#E11D48">cancel</span></div><div><div class="m-hi-title">Reject Article</div><div class="m-hi-sub">Provide a reason for the author</div></div></div>
+            <button class="m-close" onclick="closeRejectModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="m-scroll"><div class="m-body">
+            <input type="hidden" id="rejectArticleId" value="">
+            <div class="fg"><label class="fl"><span class="material-icons-round">comment</span>Rejection Reason</label><textarea class="rej-modal-note" id="rejectNote" placeholder="Explain why this article needs revision…"></textarea></div>
+            <div id="rejectError" style="display:none" class="pw-alert pw-err"><span class="material-icons-round">error</span><span id="rejectErrorText"></span></div>
+        </div></div>
+        <div class="m-foot"><button onclick="closeRejectModal()" class="btn btn-outline">Cancel</button><button onclick="submitReject()" class="btn" style="background:#E11D48;color:white"><span class="material-icons-round">cancel</span>Reject Article</button></div>
+    </div>
+</div>
+
 <!-- Article view modals -->
 <?php foreach($paginatedNews as $article): $st=getStatusInfo($article['is_pushed']); ?>
 <div class="modal-bg" id="modal-<?= $article['id'] ?>">
@@ -1089,6 +1206,91 @@ document.getElementById('searchInputMobile')?.addEventListener('input',function(
 const sa=document.getElementById('scrollArea'),sttBtn=document.getElementById('sttBtn');
 sa?.addEventListener('scroll',()=>sttBtn?.classList.toggle('show',sa.scrollTop>300));
 sttBtn?.addEventListener('click',()=>sa?.scrollTo({top:0,behavior:'smooth'}));
+
+// ── Bulk actions ──────────────────────────────────────────────────────────────
+const csrfToken=document.querySelector('meta[name="csrf-token"]')?.content??'';
+let _allSelected=false;
+function getCheckedIds(){return [...document.querySelectorAll('.article-cb:checked')].map(c=>c.value);}
+function updateBulkBar(){
+    const ids=getCheckedIds(),bar=document.getElementById('bulkBar'),cnt=document.getElementById('bulkCount');
+    if(ids.length>0){bar.classList.add('show');cnt.textContent=ids.length+' selected';}
+    else{bar.classList.remove('show');}
+    _allSelected=document.querySelectorAll('.article-cb').length===ids.length&&ids.length>0;
+    const lbl=document.getElementById('selectAllLabel');
+    if(lbl) lbl.textContent=_allSelected?'Deselect':'Select';
+}
+function selectAllArticles(){
+    const cbs=document.querySelectorAll('.article-cb');
+    const newVal=!_allSelected;
+    cbs.forEach(c=>c.checked=newVal);
+    updateBulkBar();
+}
+function clearSelection(){
+    document.querySelectorAll('.article-cb').forEach(c=>c.checked=false);
+    updateBulkBar();
+}
+async function doBulkAction(action){
+    const ids=getCheckedIds();
+    if(!ids.length){showNotification('No articles selected.','warning');return;}
+    const confirmMsgs={delete:`Delete ${ids.length} article(s)? This cannot be undone.`,archive:`Archive ${ids.length} article(s)?`};
+    if(confirmMsgs[action]&&!confirm(confirmMsgs[action]))return;
+    showLoading();
+    const fd=new FormData();
+    fd.append('action',action);
+    fd.append('csrf_token',csrfToken);
+    ids.forEach(id=>fd.append('ids[]',id));
+    try{
+        const r=await fetch('function/bulk_action.php',{method:'POST',body:fd});
+        const data=await r.json();
+        hideLoading();
+        if(data.success){showNotification(data.message,'success');setTimeout(()=>window.location.reload(),800);}
+        else showNotification(data.message||'Action failed.','error');
+    }catch{hideLoading();showNotification('Network error.','error');}
+}
+
+// ── Approval workflow ─────────────────────────────────────────────────────────
+async function approveArticle(id){
+    if(!confirm('Approve this article and push it to Headlines?'))return;
+    showLoading();
+    const fd=new FormData();
+    fd.append('id',id);fd.append('action','approve');fd.append('csrf_token',csrfToken);
+    try{
+        const r=await fetch('function/approve.php',{method:'POST',body:fd});
+        const data=await r.json();
+        hideLoading();
+        if(data.success){showNotification('Article approved!','success');setTimeout(()=>window.location.reload(),800);}
+        else showNotification(data.message||'Failed.','error');
+    }catch{hideLoading();showNotification('Network error.','error');}
+}
+function openRejectModal(id){
+    document.getElementById('rejectArticleId').value=id;
+    document.getElementById('rejectNote').value='';
+    document.getElementById('rejectError').style.display='none';
+    document.getElementById('rejectModal').classList.add('open');
+    document.body.style.overflow='hidden';
+    setTimeout(()=>document.getElementById('rejectNote')?.focus(),100);
+}
+function closeRejectModal(){document.getElementById('rejectModal').classList.remove('open');document.body.style.overflow='';}
+async function submitReject(){
+    const id=document.getElementById('rejectArticleId').value;
+    const note=document.getElementById('rejectNote').value.trim();
+    if(!note){document.getElementById('rejectErrorText').textContent='Please enter a rejection reason.';document.getElementById('rejectError').style.display='flex';return;}
+    showLoading();
+    const fd=new FormData();
+    fd.append('id',id);fd.append('action','reject');fd.append('note',note);fd.append('csrf_token',csrfToken);
+    try{
+        const r=await fetch('function/approve.php',{method:'POST',body:fd});
+        const data=await r.json();
+        hideLoading();
+        if(data.success){closeRejectModal();showNotification('Article rejected.','info');setTimeout(()=>window.location.reload(),800);}
+        else showNotification(data.message||'Failed.','error');
+    }catch{hideLoading();showNotification('Network error.','error');}
+}
+
+// Show approval_submitted toast if coming from push.php redirect
+if(new URLSearchParams(window.location.search).get('approval_submitted')==='1'){
+    showNotification('Article submitted for admin review.','info',4000);
+}
 </script>
 </body>
 </html>

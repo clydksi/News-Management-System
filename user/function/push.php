@@ -24,7 +24,8 @@ if ((int)$to === 2 && !$isAdmin) {
     $redirect = $_SERVER['HTTP_REFERER'] ?? $fallback;
     $host     = $_SERVER['HTTP_HOST'] ?? '';
     if (!empty($host) && strpos($redirect, $host) === false) $redirect = $fallback;
-    header("Location: {$redirect}&approval_submitted=1");
+    $sep = strpos($redirect, '?') !== false ? '&' : '?';
+    header("Location: {$redirect}{$sep}approval_submitted=1");
     exit;
 }
 

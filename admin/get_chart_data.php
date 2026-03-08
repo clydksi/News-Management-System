@@ -1,7 +1,13 @@
 <?php
-require '../db.php'; // your DB connection
-
+session_start();
+require '../db.php';
 header('Content-Type: application/json');
+
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    http_response_code(403);
+    echo json_encode(['error' => 'Unauthorized.']);
+    exit;
+}
 
 // --- Query 1: New users per day ---
 $stmt = $pdo->query("SELECT DATE(created_at) AS reg_date, COUNT(*) AS total 

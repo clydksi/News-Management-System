@@ -1,41 +1,71 @@
 <?php
 session_start();
 require 'db.php';
+require 'csrf.php';
 
-$error = ''; // initialize error variable
+$error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Check if username and password are set
-    $username = isset($_POST['username']) ? trim($_POST['username']) : '';
-    $password = isset($_POST['password']) ? $_POST['password'] : '';
+// --- Rate limiting ---
+$maxAttempts = 5;
+$lockoutSeconds = 300; // 5 minutes
 
-    if ($username === '' || $password === '') {
-        $error = "Please enter both username and password!";
+if (!isset($_SESSION['login_attempts'])) {
+    $_SESSION['login_attempts'] = 0;
+    $_SESSION['login_first_attempt'] = time();
+}
+
+$isLockedOut = false;
+if ($_SESSION['login_attempts'] >= $maxAttempts) {
+    $elapsed = time() - $_SESSION['login_first_attempt'];
+    if ($elapsed < $lockoutSeconds) {
+        $remaining = $lockoutSeconds - $elapsed;
+        $error = "Too many failed attempts. Please wait " . ceil($remaining / 60) . " minute(s).";
+        $isLockedOut = true;
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
-        $stmt->execute([$username]);
-        $user = $stmt->fetch();
+        $_SESSION['login_attempts'] = 0;
+        $_SESSION['login_first_attempt'] = time();
+    }
+}
 
-        if ($user && password_verify($password, $user['password'])) {
-            // Mark user as active
-            $update = $pdo->prepare("UPDATE users SET is_active = 1 WHERE id = ?");
-            $update->execute([$user['id']]);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isLockedOut) {
+    // CSRF check
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+        $error = "Invalid request. Please try again.";
+    } else {
+        $username = isset($_POST['username']) ? trim($_POST['username']) : '';
+        $password = isset($_POST['password']) ? $_POST['password'] : '';
 
-            // Set session variables
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['department_id'] = $user['department_id'];
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['username'] = $user['username']; 
-
-            // Redirect based on role
-            if ($user['role'] === 'admin') {
-                header("Location: admin/admin_dashboard.php");
-            } else {
-                header("Location: user/user_dashboard.php");
-            }
-            exit;
+        if ($username === '' || $password === '') {
+            $error = "Please enter both username and password!";
         } else {
-            $error = "Invalid credentials!";
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
+            $stmt->execute([$username]);
+            $user = $stmt->fetch();
+
+            if ($user && password_verify($password, $user['password'])) {
+                // Reset rate limit on success
+                $_SESSION['login_attempts'] = 0;
+                $_SESSION['login_first_attempt'] = time();
+
+                $update = $pdo->prepare("UPDATE users SET is_active = 1 WHERE id = ?");
+                $update->execute([$user['id']]);
+
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['department_id'] = $user['department_id'];
+                $_SESSION['role'] = $user['role'];
+                $_SESSION['username'] = $user['username'];
+
+                if ($user['role'] === 'admin') {
+                    header("Location: admin/admin_dashboard.php");
+                } else {
+                    header("Location: user/user_dashboard.php");
+                }
+                exit;
+            } else {
+                $_SESSION['login_attempts']++;
+                $error = "Invalid credentials!";
+            }
         }
     }
 }
@@ -268,6 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="post" id="loginForm">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
             <div class="form-group">
                 <input type="text" name="username" placeholder="Username" required>
                 <span class="icon">👤</span>

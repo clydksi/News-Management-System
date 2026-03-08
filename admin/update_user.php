@@ -1,6 +1,16 @@
 <?php
+session_start();
 require '../db.php';
+require '../csrf.php';
 header('Content-Type: application/json');
+
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    http_response_code(403);
+    echo json_encode(['error' => 'Unauthorized.']);
+    exit;
+}
+
+csrf_verify();
 
 $id = $_POST['id'] ?? null;
 $username = $_POST['username'] ?? null; // nullable

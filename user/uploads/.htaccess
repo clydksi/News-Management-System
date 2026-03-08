@@ -1,0 +1,7 @@
+# Block execution of server-side scripts in this directory
+<FilesMatch "\.(?:php\d*|phtml|phar|pl|py|cgi|sh|rb)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+Options -Indexes

@@ -1,39 +1,55 @@
 <?php
 require '../auth.php';
 require '../db.php';
+require '../csrf.php';
 
 // Fetch categories
 $catStmt = $pdo->query("SELECT * FROM categories ORDER BY name ASC");
 $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$uploadError = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'];
-    $content = $_POST['content'];
-    $category = $_POST['category'];  
+    csrf_verify();
+
+    $title    = $_POST['title'];
+    $content  = $_POST['content'];
+    $category = $_POST['category'];
     $user = $_SESSION['user_id'];
     $dept = $_SESSION['department_id'];
 
     $fileName = null;
     if (!empty($_FILES['attachment']['name'])) {
-        $uploadDir = __DIR__ . "/uploads/"; // safer with absolute path
-        $fileName = time() . "_" . basename($_FILES['attachment']['name']);
-        $targetFile = $uploadDir . $fileName;
+        $allowedMimes = [
+            'image/jpeg', 'image/png', 'image/gif',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+        ];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime  = $finfo->file($_FILES['attachment']['tmp_name']);
 
-        // ✅ move uploaded file securely
-        if (move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile)) {
-            // success → $fileName is set
+        if (!in_array($mime, $allowedMimes, true)) {
+            $uploadError = "Invalid file type. Allowed: JPG, PNG, GIF, PDF, DOC, DOCX, TXT.";
         } else {
-            $fileName = null; // fallback
+            $uploadDir  = __DIR__ . "/uploads/";
+            $fileName   = time() . "_" . basename($_FILES['attachment']['name']);
+            $targetFile = $uploadDir . $fileName;
+            if (!move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile)) {
+                $fileName = null;
+            }
         }
     }
 
-    // ✅ include attachment in the INSERT query
-    $stmt = $pdo->prepare("INSERT INTO news (title, content, category_id, department_id, created_by, attachment) 
-                           VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$title, $content, $category, $dept, $user, $fileName]);
+    if (!$uploadError) {
+        $stmt = $pdo->prepare("INSERT INTO news (title, content, category_id, department_id, created_by, attachment)
+                               VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $content, $category, $dept, $user, $fileName]);
 
-    header("Location: user_dashboard.php");
-    exit;
+        header("Location: user_dashboard.php");
+        exit;
+    }
 }
 ?>
 
@@ -72,7 +88,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </ul>
       </div>
 
+      <?php if ($uploadError): ?>
+        <div class="bg-red-100 border border-red-300 text-red-700 rounded-xl p-3 mb-4">
+          <?= htmlspecialchars($uploadError) ?>
+        </div>
+      <?php endif; ?>
+
       <form method="post" enctype="multipart/form-data" id="newsForm" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <!-- Title -->
         <div>
           <label for="title" class="block font-semibold mb-1">📝 Article Title</label>

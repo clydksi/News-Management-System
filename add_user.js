@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
   const addUserModal = document.getElementById('addUserModal');
   const addUserBtn = document.getElementById('addUserBtn'); // button that opens modal
   const closeAddUserModal = document.getElementById('closeAddUserModal');
@@ -38,17 +39,17 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const [key, value] of Object.entries(fields)) {
       if (!value) {
         missingFields.push(key);
-        // highlight input/select
         const el = addUserForm.querySelector(`[name="${key.toLowerCase()}"]`);
         if (el) el.classList.add('border-red-500', 'bg-red-50');
       }
     }
 
     if (missingFields.length > 0) {
-      console.log("Missing fields:", missingFields.join(", "));
       alert("Please fill out all required fields!");
       return;
     }
+
+    formData.append('csrf_token', csrfToken);
 
     // All fields filled, send AJAX request
     fetch('admin/add_user.php', {
@@ -61,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
         alert(result.message);
         addUserForm.reset();
         hideAddModal();
-        location.reload(); // Or update table dynamically
+        location.reload();
       } else {
         alert("Error: " + result.message);
       }

@@ -1,6 +1,7 @@
 <?php
 require '../auth.php';
 require '../db.php';
+require '../csrf.php';
 
 $id = $_GET['id'] ?? null;
 if (!$id) header("Location: user_dashboard.php");
@@ -16,32 +17,54 @@ if ($_SESSION['role'] === 'admin') {
 $news = $stmt->fetch();
 if (!$news) die("Not allowed.");
 
+$uploadError = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'];
+    csrf_verify();
+
+    $title   = $_POST['title'];
     $content = $_POST['content'];
-    $push = isset($_POST['push']) ? 1 : 0;
+    $push    = isset($_POST['push']) ? 1 : 0;
 
     $fileName = $news['attachment']; // keep old file
     if (!empty($_FILES['attachment']['name'])) {
-        $uploadDir = "uploads/";
-        $fileName = time() . "_" . basename($_FILES['attachment']['name']);
-        $targetFile = $uploadDir . $fileName;
-        move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile);
+        $allowedMimes = [
+            'image/jpeg', 'image/png', 'image/gif',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+        ];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime  = $finfo->file($_FILES['attachment']['tmp_name']);
+
+        if (!in_array($mime, $allowedMimes, true)) {
+            $uploadError = "Invalid file type. Allowed: JPG, PNG, GIF, PDF, DOC, DOCX, TXT.";
+        } else {
+            $uploadDir  = __DIR__ . "/uploads/";
+            $fileName   = time() . "_" . basename($_FILES['attachment']['name']);
+            $targetFile = $uploadDir . $fileName;
+            if (!move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile)) {
+                $fileName = $news['attachment']; // revert on failure
+            }
+        }
     }
     if (isset($_POST['remove_attachment'])) {
         $fileName = null;
     }
 
-    if ($_SESSION['role'] === 'admin') {
-        $stmt = $pdo->prepare("UPDATE news SET title=?, content=?, is_pushed=?, attachment=? WHERE id=?");
-        $stmt->execute([$title, $content, $push, $fileName, $id]);
-    } else {
-        $stmt = $pdo->prepare("UPDATE news SET title=?, content=?, is_pushed=?, attachment=? WHERE id=? AND department_id=?");
-        $stmt->execute([$title, $content, $push, $fileName, $id, $_SESSION['department_id']]);
-    }
+    if (!$uploadError) {
+        if ($_SESSION['role'] === 'admin') {
+            $stmt = $pdo->prepare("UPDATE news SET title=?, content=?, is_pushed=?, attachment=? WHERE id=?");
+            $stmt->execute([$title, $content, $push, $fileName, $id]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE news SET title=?, content=?, is_pushed=?, attachment=? WHERE id=? AND department_id=?");
+            $stmt->execute([$title, $content, $push, $fileName, $id, $_SESSION['department_id']]);
+        }
 
-    header("Location: user_dashboard.php");
-    exit;
+        header("Location: user_dashboard.php");
+        exit;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -75,7 +98,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="max-w-2xl w-full bg-white p-8 rounded-lg shadow-lg">
         <h2 class="text-2xl font-bold text-gray-800 mb-6">Edit News</h2>
         
+        <?php if (!empty($uploadError)): ?>
+            <div class="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md">
+                <?= htmlspecialchars($uploadError) ?>
+            </div>
+        <?php endif; ?>
+
         <form method="post" enctype="multipart/form-data" class="space-y-6" id="newsForm">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
             <div>
                 <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
                 <input 

@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+
   // ---------- MODAL UTILITIES ----------
   function showModal(modal) {
     modal.classList.remove("hidden");
@@ -76,7 +78,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setupModalClose(editUserModal, closeEditUserModal, cancelEditUser);
 
   function openEditUserModal(userId) {
-    fetch(`admin/get_user.php?id=${userId}`)
+    fetch(`admin/get_user.php?id=${userId}`, {
+      headers: { 'X-CSRF-Token': csrfToken }
+    })
       .then(res => res.json())
       .then(user => {
         if (user.error) { alert(user.error); return; }
@@ -96,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
   editUserForm.addEventListener("submit", e => {
     e.preventDefault();
     const formData = new FormData(editUserForm);
+    formData.append('csrf_token', csrfToken);
 
     // Only include password if not empty
     if (!formData.get("password")) formData.delete("password");
@@ -122,7 +127,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // View buttons
   hookUserButtons(".view-user", userId => {
-    fetch(`admin/get_user.php?id=${userId}`)
+    fetch(`admin/get_user.php?id=${userId}`, {
+      headers: { 'X-CSRF-Token': csrfToken }
+    })
       .then(res => res.json())
       .then(user => { if (!user.error) populateViewModal(user); })
       .catch(err => console.error("Failed to load user:", err));
@@ -138,13 +145,12 @@ document.addEventListener("DOMContentLoaded", () => {
     fetch("admin/delete_user.php", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `id=${userId}`
+      body: `id=${encodeURIComponent(userId)}&csrf_token=${encodeURIComponent(csrfToken)}`
     })
     .then(res => res.json())
     .then(result => {
       if (result.success) {
         alert("User deleted successfully!");
-        // Remove user row from table if exists
         const row = document.querySelector(`button.delete-user[data-id='${userId}']`)?.closest("tr");
         if (row) row.remove();
       } else {

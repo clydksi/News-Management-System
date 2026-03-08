@@ -1,5 +1,12 @@
 <?php
+session_start();
 require '../db.php';
+require '../csrf.php';
+
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    header("Location: ../login.php");
+    exit;
+}
 
 // Pagination settings
 $perPage = 5;
@@ -37,6 +44,7 @@ $pendingReviews = $pdo->query("SELECT COUNT(*) FROM departments")->fetchColumn()
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>"/>
 <title>News Admin Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>

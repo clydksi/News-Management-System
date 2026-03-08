@@ -1,0 +1,5 @@
+# Block direct access to .env and config files
+<FilesMatch "^\.env$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>

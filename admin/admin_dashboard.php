@@ -3,11 +3,6 @@ session_start();
 require '../db.php';
 require '../csrf.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../login.php");
-    exit;
-}
-
 // ── Auth check ────────────────────────────────────────────────────────────────
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'superadmin'])) {
     header('Location: ../login.php');

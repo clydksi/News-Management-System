@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isLockedOut) {
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['username'] = $user['username'];
 
-                if ($user['role'] === 'admin') {
+                if (in_array($user['role'], ['admin', 'superadmin'])) {
                     header("Location: admin/admin_dashboard.php");
                 } else {
                     header("Location: user/user_dashboard.php");

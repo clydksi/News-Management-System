@@ -2,6 +2,7 @@
 session_start();
 require '../db.php';
 require '../csrf.php';
+require 'includes/access_control.php';
 
 // ── Auth check ────────────────────────────────────────────────────────────────
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'superadmin'])) {

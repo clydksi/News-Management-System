@@ -174,13 +174,18 @@
 <script>
 async function exportLogs() {
     try {
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const qs = new URLSearchParams({
             lq:      document.querySelector('[name="lq"]')?.value     || '',
             laction: document.querySelector('[name="laction"]')?.value || '',
             lfrom:   document.querySelector('[name="lfrom"]')?.value   || '',
             lto:     document.querySelector('[name="lto"]')?.value     || '',
         });
-        const response = await fetch('actions/export_logs.php?' + qs.toString(), { method: 'POST' });
+        const response = await fetch('actions/export_logs.php?' + qs.toString(), {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrf }
+        });
+        if (!response.ok) throw new Error('Server error ' + response.status);
         const blob = await response.blob();
         const url  = URL.createObjectURL(blob);
         const a    = Object.assign(document.createElement('a'), { href: url, download: `activity_logs_${new Date().toISOString().split('T')[0]}.csv` });

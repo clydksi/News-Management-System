@@ -1,15 +1,17 @@
 <?php
-require dirname(__DIR__, 2) . '/auth.php';
+session_start();
 require dirname(__DIR__, 2) . '/db.php';
 require dirname(__DIR__, 2) . '/csrf.php';
 
-// Only admins and superadmins can approve
-if (!in_array($_SESSION['role'], ['admin', 'superadmin'])) {
+header('Content-Type: application/json');
+
+// Only admins and superadmins can approve (direct check — no auth.php which redirects)
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'superadmin'])) {
     http_response_code(403);
-    die(json_encode(['success' => false, 'message' => 'Unauthorized.']));
+    echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
+    exit;
 }
 
-header('Content-Type: application/json');
 csrf_verify();
 
 $id     = intval($_POST['id']     ?? 0);

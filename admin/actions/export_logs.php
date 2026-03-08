@@ -12,13 +12,19 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'supe
 csrf_verify();
 
 try {
-    // Fetch all logs
-    $stmt = $pdo->query("
-        SELECT l.*, u.username
-        FROM activity_logs l
-        LEFT JOIN users u ON l.user_id = u.id
-        ORDER BY l.created_at DESC
-    ");
+    // Build filtered query from GET params (same filters as the logs tab)
+    $logSearch   = trim($_GET['lq']      ?? '');
+    $logAction   = in_array($_GET['laction'] ?? '', ['create','update','delete','login','logout']) ? $_GET['laction'] : '';
+    $logDateFrom = $_GET['lfrom'] ?? '';
+    $logDateTo   = $_GET['lto']   ?? '';
+    $where  = ['1=1']; $params = [];
+    if ($logSearch)   { $where[] = '(l.description LIKE ? OR u.username LIKE ?)'; $params[] = "%$logSearch%"; $params[] = "%$logSearch%"; }
+    if ($logAction)   { $where[] = 'l.action = ?';              $params[] = $logAction; }
+    if ($logDateFrom) { $where[] = 'DATE(l.created_at) >= ?';   $params[] = $logDateFrom; }
+    if ($logDateTo)   { $where[] = 'DATE(l.created_at) <= ?';   $params[] = $logDateTo; }
+    $whereSQL = implode(' AND ', $where);
+    $stmt = $pdo->prepare("SELECT l.*, u.username FROM activity_logs l LEFT JOIN users u ON l.user_id = u.id WHERE $whereSQL ORDER BY l.created_at DESC");
+    $stmt->execute($params);
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Set headers for CSV download
@@ -48,6 +54,7 @@ try {
 } catch (PDOException $e) {
     error_log("Export logs error: " . $e->getMessage());
     http_response_code(500);
-    exit('Export failed');
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Export failed: ' . $e->getMessage()]);
 }
 ?>

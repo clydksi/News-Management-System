@@ -2,6 +2,21 @@
 session_start();
 require '../db.php';
 require '../csrf.php';
+
+// ── Ensure activity_logs table exists (auto-create if missing) ─────────────
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS activity_logs (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        user_id     INT NULL,
+        action      VARCHAR(50) NOT NULL DEFAULT 'update',
+        description TEXT NULL,
+        ip_address  VARCHAR(45) NULL,
+        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_user_id   (user_id),
+        INDEX idx_action    (action),
+        INDEX idx_created   (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+} catch (PDOException $e) {}
 require 'includes/access_control.php';
 
 // ── Auth check ────────────────────────────────────────────────────────────────
@@ -159,6 +174,7 @@ try {
     $allDepartments = $s->fetchAll(PDO::FETCH_ASSOC);
 
     if ($activeTab === 'logs') {
+        $logs = []; $totalLogs = 0;
         $logSearch   = trim($_GET['lq'] ?? '');
         $logAction   = in_array($_GET['laction'] ?? '', ['create','update','delete','login','logout']) ? $_GET['laction'] : '';
         $logDateFrom = $_GET['lfrom'] ?? '';
@@ -169,11 +185,13 @@ try {
         if ($logDateFrom) { $logWhere[] = 'DATE(al.created_at) >= ?';   $logParams[] = $logDateFrom; }
         if ($logDateTo)   { $logWhere[] = 'DATE(al.created_at) <= ?';   $logParams[] = $logDateTo; }
         $logWhereSQL = implode(' AND ', $logWhere);
-        $s = $pdo->prepare("SELECT COUNT(*) FROM activity_logs al LEFT JOIN users u ON al.user_id = u.id WHERE $logWhereSQL");
-        $s->execute($logParams); $totalLogs = (int)$s->fetchColumn();
-        $totalPages = max(1, ceil($totalLogs / $perPage));
-        $stmt = $pdo->prepare("SELECT al.id, al.action, al.description, al.ip_address, al.created_at, u.username FROM activity_logs al LEFT JOIN users u ON al.user_id = u.id WHERE $logWhereSQL ORDER BY al.created_at DESC LIMIT ? OFFSET ?");
-        $stmt->execute([...$logParams, $perPage, $offset]); $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $s = $pdo->prepare("SELECT COUNT(*) FROM activity_logs al LEFT JOIN users u ON al.user_id = u.id WHERE $logWhereSQL");
+            $s->execute($logParams); $totalLogs = (int)$s->fetchColumn();
+            $totalPages = max(1, ceil($totalLogs / $perPage));
+            $stmt = $pdo->prepare("SELECT al.id, al.action, al.description, al.ip_address, al.created_at, u.username FROM activity_logs al LEFT JOIN users u ON al.user_id = u.id WHERE $logWhereSQL ORDER BY al.created_at DESC LIMIT ? OFFSET ?");
+            $stmt->execute([...$logParams, $perPage, $offset]); $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) { error_log("Logs query error: " . $e->getMessage()); }
     }
 
     if ($activeTab === 'settings') {

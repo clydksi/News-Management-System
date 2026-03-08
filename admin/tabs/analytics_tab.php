@@ -472,11 +472,12 @@
 let _pqRejectId = null;
 
 function pqApprove(id) {
-    const row = document.getElementById('pq-item-' + id);
+    const row  = document.getElementById('pq-item-' + id);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
     fetch('../user/function/approve.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'action=approve&id=' + id
+        body: 'action=approve&id=' + id + '&csrf_token=' + encodeURIComponent(csrf)
     })
     .then(r => r.json())
     .then(d => {
@@ -507,10 +508,11 @@ function pqSubmitReject() {
     const note = document.getElementById('pq-reject-note').value.trim();
     if (!note) { document.getElementById('pq-reject-note').focus(); return; }
     const row  = document.getElementById('pq-item-' + _pqRejectId);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
     fetch('../user/function/approve.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'action=reject&id=' + _pqRejectId + '&note=' + encodeURIComponent(note)
+        body: 'action=reject&id=' + _pqRejectId + '&note=' + encodeURIComponent(note) + '&csrf_token=' + encodeURIComponent(csrf)
     })
     .then(r => r.json())
     .then(d => {

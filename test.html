@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ABC News - Breaking News, Latest News and Videos</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0a0f1e;
+    --deep-blue: #0d1b3e;
+    --mid-blue: #1a3a6e;
+    --accent-red: #e8142a;
+    --accent-red-dark: #b80f21;
+    --gold: #f5c842;
+    --ice: #e8f0fb;
+    --white: #ffffff;
+    --ink: #0e1117;
+    --muted: #64748b;
+    --border: rgba(255,255,255,0.08);
+    --border-light: #e5eaf2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #f4f6fb;
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:#f1f1f1;}
+  ::-webkit-scrollbar-thumb{background:var(--accent-red);border-radius:10px;}
+
+  /* ─── TOP UTILITY BAR ─── */
+  .top-bar {
+    background: var(--navy);
+    padding: 6px 0;
+    font-size: 11px;
+    letter-spacing: 0.6px;
+    border-bottom: 1px solid rgba(248,196,66,0.15);
+  }
+  .top-bar-inner {
+    max-width: 1360px; margin: 0 auto; padding: 0 24px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .top-bar a { color: rgba(255,255,255,0.5); text-decoration: none; margin: 0 10px; transition: color .2s; }
+  .top-bar a:hover { color: var(--gold); }
+  .top-bar-date { color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px; }
+  .weather-chip {
+    background: rgba(245,200,66,0.12);
+    border: 1px solid rgba(245,200,66,0.25);
+    color: var(--gold);
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: var(--navy);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 3px solid var(--accent-red);
+  }
+  .header-main {
+    max-width: 1360px; margin: 0 auto; padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 70px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 14px; text-decoration: none;
+    position: relative;
+  }
+  .logo-badge {
+    background: var(--accent-red);
+    width: 52px; height: 52px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: white;
+    letter-spacing: 2px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(232,20,42,0.4), 0 4px 16px rgba(232,20,42,0.3);
+  }
+  .logo-badge::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 14px; height: 14px;
+    background: var(--gold);
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+  }
+  .logo-wordmark {
+    color: white;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    letter-spacing: 4px;
+    line-height: 1;
+  }
+  .logo-sub {
+    color: rgba(255,255,255,0.35);
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    display: block;
+    margin-top: 2px;
+  }
+  .header-actions {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .search-wrap {
+    display: flex; align-items: center;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    padding: 8px 14px;
+    gap: 8px;
+    transition: border-color .2s, background .2s;
+  }
+  .search-wrap:focus-within {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.25);
+  }
+  .search-wrap svg { color: rgba(255,255,255,0.4); }
+  .search-wrap input {
+    background: none; border: none; outline: none;
+    color: white; font-size: 13px; width: 200px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .search-wrap input::placeholder { color: rgba(255,255,255,0.35); }
+  .btn-live {
+    background: var(--accent-red);
+    color: white; border: none;
+    padding: 9px 18px; border-radius: 6px;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    cursor: pointer; text-decoration: none;
+    display: flex; align-items: center; gap: 8px;
+    transition: background .2s, transform .15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-live:hover { background: var(--accent-red-dark); transform: translateY(-1px); }
+  .live-pulse {
+    width: 8px; height: 8px;
+    background: white; border-radius: 50%;
+    animation: lp 1.4s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(255,255,255,0.6);
+  }
+  @keyframes lp {
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  }
+
+  /* ─── NAV ─── */
+  nav { background: var(--deep-blue); }
+  .nav-inner {
+    max-width: 1360px; margin: 0 auto; padding: 0 24px;
+    display: flex; align-items: center; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  nav a {
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    font-size: 11.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    padding: 13px 18px;
+    white-space: nowrap; display: block;
+    border-bottom: 2px solid transparent;
+    transition: all .2s; position: relative;
+  }
+  nav a:hover { color: white; border-bottom-color: rgba(255,255,255,0.3); }
+  nav a.active { color: white; border-bottom-color: var(--accent-red); }
+
+  /* ─── BREAKING TICKER ─── */
+  .ticker-bar {
+    background: var(--accent-red);
+    padding: 9px 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .ticker-bar::before, .ticker-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 60px;
+    z-index: 2;
+  }
+  .ticker-bar::before { left: 200px; background: linear-gradient(to right, var(--accent-red), transparent); }
+  .ticker-bar::after { right: 0; background: linear-gradient(to left, var(--accent-red), transparent); }
+  .ticker-inner {
+    max-width: 1360px; margin: 0 auto; padding: 0 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .ticker-label {
+    background: white;
+    color: var(--accent-red);
+    font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    padding: 3px 10px; border-radius: 3px;
+    flex-shrink: 0; z-index: 3;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .ticker-track { overflow: hidden; flex: 1; }
+  .ticker-scroll {
+    font-size: 12.5px; font-weight: 600;
+    white-space: nowrap;
+    color: rgba(255,255,255,0.95);
+    animation: scroll 35s linear infinite;
+    letter-spacing: 0.3px;
+  }
+  @keyframes scroll {
+    from { transform: translateX(80vw); }
+    to { transform: translateX(-100%); }
+  }
+  .ticker-dot { color: rgba(255,255,255,0.4); margin: 0 16px; }
+
+  /* ─── MAIN LAYOUT ─── */
+  .page-wrap { max-width: 1360px; margin: 0 auto; padding: 0 24px; }
+
+  /* ─── HERO ─── */
+  .hero { padding: 28px 0 36px; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    grid-template-rows: auto;
+    gap: 20px;
+  }
+  /* Left: big card */
+  .hero-lead {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: linear-gradient(135deg, #0d1b3e 0%, #1a3a6e 40%, #0a0f1e 100%);
+    min-height: 500px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .hero-lead-media {
+    position: absolute; inset: 0;
+    background: 
+      radial-gradient(ellipse at 70% 30%, rgba(26,58,110,0.6) 0%, transparent 60%),
+      radial-gradient(ellipse at 20% 80%, rgba(232,20,42,0.2) 0%, transparent 50%),
+      linear-gradient(135deg, #0d1b3e 0%, #162d5e 40%, #0c1930 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hero-lead-media .bg-letter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 280px;
+    color: rgba(255,255,255,0.04);
+    line-height: 1;
+    user-select: none;
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    right: 40px;
+  }
+  .hero-lead-content {
+    position: relative;
+    padding: 32px;
+    background: linear-gradient(to top, rgba(8,12,24,0.97) 0%, rgba(8,12,24,0.7) 55%, transparent 100%);
+    z-index: 2;
+  }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.2px; margin-bottom: 12px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .tag-red { background: var(--accent-red); color: white; }
+  .tag-gold { background: var(--gold); color: var(--navy); }
+  .tag-blue { background: var(--mid-blue); color: white; border: 1px solid rgba(255,255,255,0.1); }
+  .tag-outline { background: transparent; color: var(--accent-red); border: 1px solid var(--accent-red); }
+  .hero-headline {
+    font-family: 'DM Serif Display', serif;
+    font-size: 34px; font-weight: 400;
+    color: white; line-height: 1.18;
+    margin-bottom: 14px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    letter-spacing: -0.3px;
+  }
+  .hero-headline em { font-style: italic; color: var(--gold); }
+  .article-meta {
+    display: flex; align-items: center; gap: 0;
+    color: rgba(255,255,255,0.5); font-size: 12px;
+    flex-wrap: wrap; gap: 6px;
+  }
+  .article-meta .by { font-weight: 600; color: rgba(255,255,255,0.75); }
+  .meta-sep { color: rgba(255,255,255,0.2); margin: 0 6px; }
+  .read-btn {
+    margin-top: 18px;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: white; color: var(--navy);
+    padding: 9px 18px; border-radius: 6px;
+    font-size: 12px; font-weight: 700;
+    text-decoration: none;
+    transition: background .2s, gap .2s;
+    letter-spacing: 0.5px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .read-btn:hover { background: var(--ice); gap: 12px; }
+  .read-btn svg { transition: transform .2s; }
+  .read-btn:hover svg { transform: translateX(3px); }
+
+  /* Hero side stack */
+  .hero-side {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .side-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    transition: box-shadow .2s, transform .2s;
+    border: 1px solid var(--border-light);
+  }
+  .side-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-1px); }
+  .side-card-thumb {
+    width: 90px; height: 80px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; color: rgba(255,255,255,0.3);
+  }
+  .side-card-body { padding: 12px 14px; flex: 1; }
+  .side-card-cat { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-red); margin-bottom: 5px; }
+  .side-card-title { font-family: 'DM Serif Display', serif; font-size: 14px; line-height: 1.3; color: var(--ink); }
+  .side-card-time { font-size: 10.5px; color: var(--muted); margin-top: 5px; }
+
+  /* ─── AD STRIP ─── */
+  .ad-strip {
+    background: white;
+    border: 1px dashed #d1d9ea;
+    border-radius: 6px;
+    padding: 14px 20px;
+    text-align: center;
+    color: #b0bbc8; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin: 8px 0 28px;
+  }
+
+  /* ─── SECTION HEADERS ─── */
+  .sec-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .sec-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px; letter-spacing: 2px;
+    color: var(--navy);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .sec-title::before {
+    content: '';
+    display: block;
+    width: 4px; height: 26px;
+    background: var(--accent-red);
+    border-radius: 2px;
+  }
+  .sec-more {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--mid-blue);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 4px;
+    transition: color .2s, gap .2s;
+  }
+  .sec-more:hover { color: var(--accent-red); gap: 8px; }
+
+  /* ─── NEWS CARD GRID ─── */
+  .news-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 36px;
+  }
+  .nc {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid var(--border-light);
+    transition: box-shadow .25s, transform .25s;
+    display: flex; flex-direction: column;
+  }
+  .nc:hover { box-shadow: 0 10px 32px rgba(13,27,62,0.12); transform: translateY(-3px); }
+  .nc-thumb {
+    height: 155px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px; color: rgba(255,255,255,0.2);
+    position: relative; overflow: hidden;
+  }
+  .nc-thumb-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.3) 100%);
+  }
+  .nc-vid {
+    position: absolute; bottom: 8px; left: 8px;
+    background: rgba(0,0,0,0.7); color: white;
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; padding: 3px 8px;
+    border-radius: 3px; display: flex; align-items: center; gap: 5px;
+    backdrop-filter: blur(4px);
+  }
+  .vid-tri { width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 6px solid white; }
+  .nc-body { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; }
+  .nc-cat { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-red); margin-bottom: 6px; }
+  .nc-title { font-family: 'DM Serif Display', serif; font-size: 15px; line-height: 1.35; color: var(--ink); flex: 1; }
+  .nc-time { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* ─── 2-COL MAIN ─── */
+  .two-col-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 32px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-light);
+    margin-bottom: 40px;
+  }
+
+  /* List stories */
+  .lst {
+    display: flex; gap: 16px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: opacity .2s;
+  }
+  .lst:last-child { border-bottom: none; }
+  .lst:hover { opacity: .85; }
+  .lst-thumb {
+    width: 110px; height: 78px;
+    border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; color: rgba(255,255,255,0.25);
+    position: relative; overflow: hidden;
+  }
+  .lst-body { flex: 1; }
+  .lst-cat { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-red); margin-bottom: 5px; }
+  .lst-title { font-family: 'DM Serif Display', serif; font-size: 17px; line-height: 1.3; color: var(--ink); margin-bottom: 5px; }
+  .lst-excerpt { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .lst-time { font-size: 11px; color: #9aa4b8; margin-top: 5px; }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar { padding-top: 8px; }
+  .widget { margin-bottom: 28px; }
+  .w-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 2px;
+    color: var(--navy);
+    border-bottom: 2px solid var(--accent-red);
+    padding-bottom: 8px; margin-bottom: 14px;
+  }
+
+  /* Trending */
+  .trend-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: opacity .2s;
+  }
+  .trend-item:hover { opacity: .8; }
+  .trend-item:last-child { border-bottom: none; }
+  .trend-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; line-height: 1;
+    color: var(--border-light);
+    flex-shrink: 0; width: 30px; text-align: right;
+  }
+  .trend-cat { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-red); margin-bottom: 4px; }
+  .trend-title { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+
+  /* Newsletter */
+  .nl-box {
+    background: var(--navy);
+    border-radius: 10px;
+    padding: 22px;
+    position: relative; overflow: hidden;
+  }
+  .nl-box::before {
+    content: '✉';
+    position: absolute;
+    right: -10px; top: 50%; transform: translateY(-50%);
+    font-size: 120px; opacity: 0.04;
+    line-height: 1;
+  }
+  .nl-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: white; margin-bottom: 6px; }
+  .nl-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 16px; line-height: 1.5; }
+  .nl-input {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.08);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: white;
+    margin-bottom: 8px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .nl-input::placeholder { color: rgba(255,255,255,0.35); }
+  .nl-input:focus { border-color: rgba(255,255,255,0.3); }
+  .nl-btn {
+    width: 100%; background: var(--accent-red); color: white;
+    border: none; padding: 10px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    cursor: pointer; transition: background .2s;
+  }
+  .nl-btn:hover { background: var(--accent-red-dark); }
+
+  /* Live block */
+  .live-block {
+    background: var(--deep-blue);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: opacity .2s;
+    position: relative; overflow: hidden;
+  }
+  .live-block:hover { opacity: .9; }
+  .live-block::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(232,20,42,0.2) 0%, transparent 70%);
+  }
+  .lv-play {
+    width: 52px; height: 52px;
+    background: var(--accent-red);
+    border-radius: 50%;
+    margin: 0 auto 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 6px rgba(232,20,42,0.2);
+    position: relative; z-index: 1;
+  }
+  .lv-play .tri { width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 16px solid white; margin-left: 3px; }
+  .lv-label { color: white; font-weight: 700; font-size: 14px; margin-bottom: 4px; position: relative; z-index: 1; }
+  .lv-prog { color: rgba(255,255,255,0.5); font-size: 12px; position: relative; z-index: 1; }
+  .lv-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--accent-red);
+    color: white; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 3px 10px; border-radius: 20px;
+    margin-bottom: 12px;
+    position: relative; z-index: 1;
+  }
+  .lv-dot { width: 6px; height: 6px; background: white; border-radius: 50%; animation: lp 1.4s infinite; }
+
+  /* ─── OPINION ─── */
+  .opinion-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-bottom: 40px;
+  }
+  .op-card {
+    background: white;
+    border-radius: 10px;
+    padding: 22px;
+    cursor: pointer;
+    border: 1px solid var(--border-light);
+    transition: box-shadow .2s, transform .2s, border-color .2s;
+    position: relative;
+  }
+  .op-card:hover { box-shadow: 0 8px 28px rgba(13,27,62,0.1); transform: translateY(-2px); border-color: #c5d2e8; }
+  .op-card::after {
+    content: '"';
+    position: absolute; top: 16px; right: 16px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 60px; color: var(--border-light);
+    line-height: 1; pointer-events: none;
+  }
+  .op-avatar {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; color: white; letter-spacing: 1px;
+  }
+  .op-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .op-role { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  .op-title { font-family: 'DM Serif Display', serif; font-size: 16px; line-height: 1.35; color: var(--ink); }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: var(--navy);
+    color: rgba(255,255,255,0.5);
+    padding: 48px 0 0;
+    margin-top: 12px;
+    position: relative;
+  }
+  footer::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(to right, var(--accent-red) 0%, var(--gold) 50%, var(--mid-blue) 100%);
+    position: absolute; top: 0; left: 0; right: 0;
+  }
+  .footer-inner {
+    max-width: 1360px; margin: 0 auto; padding: 0 24px;
+    display: grid;
+    grid-template-columns: 220px repeat(4, 1fr);
+    gap: 36px;
+    padding-bottom: 36px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .footer-brand-logo {
+    display: flex; align-items: center; gap: 12px;
+    text-decoration: none; margin-bottom: 14px;
+  }
+  .fl-badge {
+    background: var(--accent-red);
+    width: 40px; height: 40px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: 18px;
+    color: white; letter-spacing: 1px;
+  }
+  .fl-text { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; color: white; }
+  .footer-tagline { font-size: 12px; color: rgba(255,255,255,0.3); line-height: 1.6; margin-bottom: 18px; }
+  .socials { display: flex; gap: 8px; }
+  .soc {
+    width: 34px; height: 34px; border-radius: 6px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.5); font-size: 13px; font-weight: 700;
+    text-decoration: none; cursor: pointer;
+    transition: background .2s, color .2s, border-color .2s;
+  }
+  .soc:hover { background: var(--accent-red); color: white; border-color: var(--accent-red); }
+  .footer-col h5 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 14px; padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .footer-col a {
+    display: block; color: rgba(255,255,255,0.4);
+    text-decoration: none; font-size: 13px;
+    margin-bottom: 8px; transition: color .2s;
+  }
+  .footer-col a:hover { color: white; }
+  .footer-bottom {
+    max-width: 1360px; margin: 0 auto; padding: 16px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: rgba(255,255,255,0.25);
+  }
+  .footer-links-row a {
+    color: rgba(255,255,255,0.3); text-decoration: none;
+    margin-left: 16px; transition: color .2s;
+    font-size: 11px;
+  }
+  .footer-links-row a:hover { color: white; }
+
+  /* ─── COLOR BACKGROUNDS FOR THUMBS ─── */
+  .bg-navy-grad { background: linear-gradient(135deg, #0d1b3e, #1a3a6e); }
+  .bg-red-grad { background: linear-gradient(135deg, #c8102e, #7a0018); }
+  .bg-teal-grad { background: linear-gradient(135deg, #075e5a, #033c3a); }
+  .bg-dark-grad { background: linear-gradient(135deg, #1a1a2e, #0a0a0f); }
+  .bg-purple-grad { background: linear-gradient(135deg, #3d1a6e, #210d3c); }
+  .bg-forest-grad { background: linear-gradient(135deg, #144a2c, #0a2618); }
+  .bg-amber-grad { background: linear-gradient(135deg, #6b3a0d, #3c1e05); }
+  .bg-slate-grad { background: linear-gradient(135deg, #2d3748, #1a202c); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 1100px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .news-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .two-col-grid { grid-template-columns: 1fr; }
+    .footer-inner { grid-template-columns: repeat(2, 1fr); }
+    .opinion-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .news-grid-4 { grid-template-columns: 1fr; }
+    .opinion-grid { grid-template-columns: 1fr; }
+    .hero-headline { font-size: 26px; }
+    .search-wrap { display: none; }
+    .page-wrap { padding: 0 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div style="display:flex;align-items:center;gap:4px;">
+      <span class="top-bar-date">Wednesday, February 25, 2026</span>
+      <a href="#">ABC News Live</a>
+      <a href="#">Shows</a>
+      <a href="#">Schedule</a>
+    </div>
+    <div style="display:flex;align-items:center;">
+      <a href="#">Sign In</a>
+      <a href="#">Newsletters</a>
+      <span class="weather-chip">🌤 Manila 32°C</span>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-main">
+    <a class="logo" href="#">
+      <div class="logo-badge">ABC</div>
+      <div>
+        <div class="logo-wordmark">News</div>
+        <span class="logo-sub">Breaking & Latest</span>
+      </div>
+    </a>
+    <div class="header-actions">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search ABC News…">
+      </div>
+      <a class="btn-live" href="#">
+        <div class="live-pulse"></div>
+        Watch Live
+      </a>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="active">Home</a>
+      <a href="#">U.S.</a>
+      <a href="#">World</a>
+      <a href="#">Politics</a>
+      <a href="#">Business</a>
+      <a href="#">Health</a>
+      <a href="#">Entertainment</a>
+      <a href="#">Technology</a>
+      <a href="#">Sports</a>
+      <a href="#">Science</a>
+      <a href="#">Weather</a>
+      <a href="#">Opinion</a>
+      <a href="#">Video</a>
+    </div>
+  </nav>
+</header>
+
+<!-- BREAKING TICKER -->
+<div class="ticker-bar">
+  <div class="ticker-inner">
+    <span class="ticker-label">Breaking</span>
+    <div class="ticker-track">
+      <div class="ticker-scroll">
+        Senate passes landmark infrastructure bill in bipartisan vote
+        <span class="ticker-dot">◆</span>
+        Markets rally as Fed signals pause on rate hikes
+        <span class="ticker-dot">◆</span>
+        International climate summit reaches new emissions agreement
+        <span class="ticker-dot">◆</span>
+        Tech giant announces major layoffs amid restructuring plans
+        <span class="ticker-dot">◆</span>
+        Tropical storm strengthens in Pacific — Philippines on alert
+        <span class="ticker-dot">◆</span>
+        Senate passes landmark infrastructure bill in bipartisan vote
+        <span class="ticker-dot">◆</span>
+        Markets rally as Fed signals pause on rate hikes
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid">
+      <!-- Lead Story -->
+      <div class="hero-lead">
+        <div class="hero-lead-media">
+          <div class="bg-letter">S</div>
+        </div>
+        <div class="hero-lead-content">
+          <span class="tag tag-red">Top Story</span>
+          <h1 class="hero-headline">Senate Passes Historic Infrastructure Bill With <em>Rare Bipartisan</em> Support</h1>
+          <div class="article-meta">
+            <span class="by">Jonathan Rivers</span>
+            <span class="meta-sep">·</span>
+            <span>2 hours ago</span>
+            <span class="meta-sep">·</span>
+            <span>4 min read</span>
+          </div>
+          <a class="read-btn" href="#">
+            Read Story
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Side Stories -->
+      <div class="hero-side">
+        <div class="side-card">
+          <div class="side-card-thumb bg-navy-grad">W</div>
+          <div class="side-card-body">
+            <div class="side-card-cat">World</div>
+            <div class="side-card-title">European Leaders Meet for Emergency Security Summit in Brussels</div>
+            <div class="side-card-time">1 hour ago</div>
+          </div>
+        </div>
+        <div class="side-card">
+          <div class="side-card-thumb bg-red-grad">P</div>
+          <div class="side-card-body">
+            <div class="side-card-cat">Politics</div>
+            <div class="side-card-title">White House Responds to Congressional Budget Standoff</div>
+            <div class="side-card-time">3 hours ago</div>
+          </div>
+        </div>
+        <div class="side-card">
+          <div class="side-card-thumb bg-forest-grad">H</div>
+          <div class="side-card-body">
+            <div class="side-card-cat">Health</div>
+            <div class="side-card-title">CDC Issues New Guidelines on Air Quality Standards for Urban Areas</div>
+            <div class="side-card-time">4 hours ago</div>
+          </div>
+        </div>
+        <div class="side-card">
+          <div class="side-card-thumb bg-purple-grad">T</div>
+          <div class="side-card-body">
+            <div class="side-card-cat">Technology</div>
+            <div class="side-card-title">AI Regulation Bill Advances Through Committee After Weeks of Debate</div>
+            <div class="side-card-time">5 hours ago</div>
+          </div>
+        </div>
+        <div class="side-card">
+          <div class="side-card-thumb bg-amber-grad">E</div>
+          <div class="side-card-body">
+            <div class="side-card-cat">Entertainment</div>
+            <div class="side-card-title">Award Season Heats Up as Studios Release Final Contenders</div>
+            <div class="side-card-time">6 hours ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AD -->
+  <div class="ad-strip">Advertisement</div>
+
+  <!-- LATEST NEWS GRID -->
+  <div class="sec-head">
+    <div class="sec-title">Latest News</div>
+    <a class="sec-more" href="#">See All <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+  </div>
+  <div class="news-grid-4">
+    <div class="nc">
+      <div class="nc-thumb bg-navy-grad">
+        <span>B</span>
+        <div class="nc-thumb-overlay"></div>
+        <div class="nc-vid"><div class="vid-tri"></div>VIDEO</div>
+      </div>
+      <div class="nc-body">
+        <div class="nc-cat">Business</div>
+        <div class="nc-title">Fed Chair Signals End of Rate Hike Cycle as Inflation Cools</div>
+        <div class="nc-time">30 min ago</div>
+      </div>
+    </div>
+    <div class="nc">
+      <div class="nc-thumb bg-red-grad">
+        <span>W</span>
+        <div class="nc-thumb-overlay"></div>
+      </div>
+      <div class="nc-body">
+        <div class="nc-cat">World</div>
+        <div class="nc-title">UN Security Council Votes on Ceasefire Resolution in Ongoing Conflict</div>
+        <div class="nc-time">1 hour ago</div>
+      </div>
+    </div>
+    <div class="nc">
+      <div class="nc-thumb bg-teal-grad">
+        <span>S</span>
+        <div class="nc-thumb-overlay"></div>
+        <div class="nc-vid"><div class="vid-tri"></div>VIDEO</div>
+      </div>
+      <div class="nc-body">
+        <div class="nc-cat">Science</div>
+        <div class="nc-title">Scientists Discover Potential Breakthrough in Alzheimer's Treatment</div>
+        <div class="nc-time">2 hours ago</div>
+      </div>
+    </div>
+    <div class="nc">
+      <div class="nc-thumb bg-dark-grad">
+        <span>P</span>
+        <div class="nc-thumb-overlay"></div>
+      </div>
+      <div class="nc-body">
+        <div class="nc-cat">Politics</div>
+        <div class="nc-title">Primary Season Kickoff: Early Polls Show Tight Race in Key States</div>
+        <div class="nc-time">2 hours ago</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2-COL: TOP STORIES + SIDEBAR -->
+  <div class="two-col-grid">
+    <div>
+      <div class="sec-head" style="border-bottom:none; margin-bottom:4px;">
+        <div class="sec-title">Top Stories</div>
+      </div>
+
+      <div class="lst">
+        <div class="lst-thumb bg-navy-grad">A</div>
+        <div class="lst-body">
+          <div class="lst-cat">U.S.</div>
+          <div class="lst-title">Border Security Bill Faces New Hurdles After Senate Amendments Added</div>
+          <div class="lst-excerpt">Lawmakers from both parties expressed frustration with the revised legislation that includes new provisions on asylum processing times.</div>
+          <div class="lst-time">45 min ago</div>
+        </div>
+      </div>
+      <div class="lst">
+        <div class="lst-thumb bg-teal-grad">C</div>
+        <div class="lst-body">
+          <div class="lst-cat">Climate</div>
+          <div class="lst-title">Record Ocean Temperatures Threaten Coral Reefs Across Pacific Basin</div>
+          <div class="lst-excerpt">Marine scientists warn that this year's bleaching event could be the most severe on record, affecting ecosystems from Hawaii to the Philippines.</div>
+          <div class="lst-time">1 hour ago</div>
+        </div>
+      </div>
+      <div class="lst">
+        <div class="lst-thumb bg-forest-grad">E</div>
+        <div class="lst-body">
+          <div class="lst-cat">Economy</div>
+          <div class="lst-title">Job Market Resilience Surprises Economists as February Numbers Come In</div>
+          <div class="lst-excerpt">The Labor Department reported stronger-than-expected job creation last month, complicating the Fed's path toward interest rate cuts.</div>
+          <div class="lst-time">2 hours ago</div>
+        </div>
+      </div>
+      <div class="lst">
+        <div class="lst-thumb bg-slate-grad">T</div>
+        <div class="lst-body">
+          <div class="lst-cat">Technology</div>
+          <div class="lst-title">Major Social Platform Announces Sweeping Changes to Content Moderation Policy</div>
+          <div class="lst-excerpt">The new framework will rely more heavily on AI systems to flag potentially harmful content before human reviewers see it.</div>
+          <div class="lst-time">3 hours ago</div>
+        </div>
+      </div>
+      <div class="lst">
+        <div class="lst-thumb bg-purple-grad">H</div>
+        <div class="lst-body">
+          <div class="lst-cat">Health</div>
+          <div class="lst-title">NIH Study Links Ultra-Processed Foods to Increased Risk of Cognitive Decline</div>
+          <div class="lst-excerpt">Researchers tracked over 50,000 participants for a decade and found significant correlations between diet quality and brain health outcomes.</div>
+          <div class="lst-time">4 hours ago</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="widget">
+        <div class="w-title">Trending Now</div>
+        <div class="trend-item">
+          <div class="trend-num">01</div>
+          <div>
+            <div class="trend-cat">Politics</div>
+            <div class="trend-title">President signs executive order on AI national security framework</div>
+          </div>
+        </div>
+        <div class="trend-item">
+          <div class="trend-num">02</div>
+          <div>
+            <div class="trend-cat">World</div>
+            <div class="trend-title">Philippines typhoon update: Thousands evacuated from coastal zones</div>
+          </div>
+        </div>
+        <div class="trend-item">
+          <div class="trend-num">03</div>
+          <div>
+            <div class="trend-cat">Business</div>
+            <div class="trend-title">Apple unveils next-generation chips with record performance gains</div>
+          </div>
+        </div>
+        <div class="trend-item">
+          <div class="trend-num">04</div>
+          <div>
+            <div class="trend-cat">Health</div>
+            <div class="trend-title">New RSV vaccine shows 90% efficacy in elderly population trial</div>
+          </div>
+        </div>
+        <div class="trend-item">
+          <div class="trend-num">05</div>
+          <div>
+            <div class="trend-cat">Sports</div>
+            <div class="trend-title">NBA trade deadline delivers blockbuster moves across the league</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="widget">
+        <div class="nl-box">
+          <div class="nl-title">ABC News Briefing</div>
+          <div class="nl-sub">Top stories delivered to your inbox every morning. Free, no spam.</div>
+          <input class="nl-input" type="email" placeholder="your@email.com">
+          <button class="nl-btn">Subscribe Free</button>
+        </div>
+      </div>
+
+      <div class="widget">
+        <div class="live-block">
+          <span class="lv-badge"><span class="lv-dot"></span>Live Now</span>
+          <div class="lv-play"><div class="tri"></div></div>
+          <div class="lv-label">Watch ABC News Live</div>
+          <div class="lv-prog">ABC News Midday Report</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPINION -->
+  <div class="sec-head">
+    <div class="sec-title">Opinion</div>
+    <a class="sec-more" href="#">More Opinion <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+  </div>
+  <div class="opinion-grid">
+    <div class="op-card">
+      <div class="op-avatar" style="background: linear-gradient(135deg, #0d1b3e, #1a3a6e);">SR</div>
+      <div class="op-name">Sarah Reynolds</div>
+      <div class="op-role">Senior Political Analyst</div>
+      <div class="op-title">Why the Infrastructure Bill Signals a New Era of Governing</div>
+    </div>
+    <div class="op-card">
+      <div class="op-avatar" style="background: linear-gradient(135deg, #c8102e, #7a0018);">MK</div>
+      <div class="op-name">Marcus Kim</div>
+      <div class="op-role">Economics Correspondent</div>
+      <div class="op-title">The Fed's Pivot Could Define the Economy for the Next Decade</div>
+    </div>
+    <div class="op-card">
+      <div class="op-avatar" style="background: linear-gradient(135deg, #144a2c, #0a2618);">LP</div>
+      <div class="op-name">Lisa Pacheco</div>
+      <div class="op-role">Foreign Affairs Editor</div>
+      <div class="op-title">America's Role in the New World Order After the Summit</div>
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <a class="footer-brand-logo" href="#">
+        <div class="fl-badge">ABC</div>
+        <div class="fl-text">News</div>
+      </a>
+      <div class="footer-tagline">Breaking news and in-depth analysis from around the world, around the clock.</div>
+      <div class="socials">
+        <a class="soc" href="#">f</a>
+        <a class="soc" href="#">𝕏</a>
+        <a class="soc" href="#">in</a>
+        <a class="soc" href="#">▶</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h5>Sections</h5>
+      <a href="#">U.S. News</a>
+      <a href="#">World News</a>
+      <a href="#">Politics</a>
+      <a href="#">Business</a>
+      <a href="#">Health</a>
+      <a href="#">Technology</a>
+    </div>
+    <div class="footer-col">
+      <h5>Shows</h5>
+      <a href="#">Good Morning America</a>
+      <a href="#">World News Tonight</a>
+      <a href="#">20/20</a>
+      <a href="#">Nightline</a>
+      <a href="#">This Week</a>
+    </div>
+    <div class="footer-col">
+      <h5>More ABC News</h5>
+      <a href="#">ABC News Live</a>
+      <a href="#">Video</a>
+      <a href="#">Podcasts</a>
+      <a href="#">Newsletters</a>
+      <a href="#">Alerts</a>
+    </div>
+    <div class="footer-col">
+      <h5>Company</h5>
+      <a href="#">About ABC News</a>
+      <a href="#">Contact Us</a>
+      <a href="#">Careers</a>
+      <a href="#">Advertise</a>
+      <a href="#">Accessibility</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>© 2026 ABC News. All rights reserved.</div>
+    <div class="footer-links-row">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Use</a>
+      <a href="#">Do Not Sell My Info</a>
+      <a href="#">Ad Choices</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

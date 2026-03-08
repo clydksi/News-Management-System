@@ -1,0 +1,37 @@
+# API Keys and Configuration
+config.php
+.env
+*.key
+
+# Session files
+sessions/
+tmp/
+
+# Logs
+*.log
+logs/
+error_log
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+*.tmp
+*.temp
+
+# Cache
+cache/
+*.cache

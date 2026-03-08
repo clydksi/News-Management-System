@@ -14,9 +14,6 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'supe
 csrf_verify();
 
 try {
-    // Clear PHP session cache
-    session_regenerate_id(true);
-
     // Clear any cache files if they exist
     $cacheDir = '../../cache';
     if (is_dir($cacheDir)) {

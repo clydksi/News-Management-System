@@ -62,8 +62,16 @@ try {
         $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
     ]);
 
+    // Maintenance mode: write / remove a flag file so auth.php can check it without a DB query
+    $flagFile = dirname(__DIR__, 2) . '/maintenance.flag';
+    if ($settings['maintenance_mode']) {
+        file_put_contents($flagFile, date('Y-m-d H:i:s'));
+    } else {
+        if (file_exists($flagFile)) @unlink($flagFile);
+    }
+
     echo json_encode([
-        'success' => true, 
+        'success' => true,
         'message' => 'Settings saved successfully'
     ]);
 

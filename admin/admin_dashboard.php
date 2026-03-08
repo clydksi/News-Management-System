@@ -197,7 +197,7 @@ try {
     if ($activeTab === 'settings') {
         $settings = [];
         try {
-            $rows = $pdo->query("SELECT setting_key, setting_value FROM settings")->fetchAll(PDO::FETCH_ASSOC);
+            $rows = $pdo->query("SELECT setting_key, setting_value FROM system_settings")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($rows as $row) { $settings[$row['setting_key']] = $row['setting_value']; }
         } catch (PDOException $e) {}
     }

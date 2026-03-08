@@ -44,6 +44,7 @@
 
 <div style="padding:20px 22px">
 <form id="settingsForm">
+<input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
     <!-- ── Site Information ───────────────────────── -->
     <div class="set-card">
@@ -208,8 +209,9 @@
     </div>
 
     <!-- ── Maintenance Mode ───────────────────────── -->
-    <div class="set-card">
-        <div class="set-card-hd">
+    <?php $maintActive = ($settings['maintenance_mode'] ?? '0') == '1'; ?>
+    <div class="set-card" id="maintenanceCard" style="<?= $maintActive ? 'border-color:#FCD34D;box-shadow:0 0 0 3px rgba(253,211,77,.2)' : '' ?>">
+        <div class="set-card-hd" style="<?= $maintActive ? 'background:#FFFBEB' : '' ?>">
             <div class="set-card-ico" style="background:#FFFBEB">
                 <span class="material-icons-round" style="color:#D97706">construction</span>
             </div>
@@ -217,17 +219,27 @@
                 <div class="set-card-title">Maintenance Mode</div>
                 <div class="set-card-sub">Take the system offline for regular users</div>
             </div>
+            <?php if ($maintActive): ?>
+            <span style="margin-left:auto;padding:3px 10px;border-radius:99px;background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;font-family:'Fira Code',monospace;border:1px solid #FCD34D;animation:pulse-dot 1.5s infinite">● ACTIVE</span>
+            <?php endif; ?>
         </div>
         <div class="set-card-body" style="padding-bottom:10px">
-            <div class="set-toggle-row" style="border-color:<?= ($settings['maintenance_mode'] ?? '0') == '1' ? '#FCD34D' : 'var(--border)' ?>;background:<?= ($settings['maintenance_mode'] ?? '0') == '1' ? '#FFFBEB' : 'var(--canvas)' ?>">
+            <?php if ($maintActive): ?>
+            <div style="padding:10px 14px;border-radius:8px;background:#FEF3C7;border:1px solid #FCD34D;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#92400E">
+                <span class="material-icons-round" style="font-size:16px!important;color:#D97706">warning</span>
+                <span><strong>Maintenance is ON.</strong> Regular users see a maintenance page. Admins &amp; superadmins are unaffected.</span>
+            </div>
+            <?php endif; ?>
+            <div class="set-toggle-row" id="maintenanceRow" style="border-color:<?= $maintActive ? '#FCD34D' : 'var(--border)' ?>;background:<?= $maintActive ? '#FFFBEB' : 'var(--canvas)' ?>">
                 <div>
                     <div class="set-toggle-label">Enable Maintenance Mode</div>
-                    <div class="set-toggle-sub">Show maintenance page to all users except admins</div>
+                    <div class="set-toggle-sub">Show maintenance page to all users except admins &amp; superadmins</div>
                 </div>
                 <label class="toggle-sw">
-                    <input type="checkbox" name="maintenance_mode" value="1"
-                           <?= ($settings['maintenance_mode'] ?? '0') == '1' ? 'checked' : '' ?>>
-                    <div class="toggle-track" style="<?= ($settings['maintenance_mode'] ?? '0') == '1' ? 'background:#D97706' : '' ?>"></div>
+                    <input type="checkbox" name="maintenance_mode" id="maintenanceToggle" value="1"
+                           <?= $maintActive ? 'checked' : '' ?>
+                           onchange="onMaintenanceToggle(this)">
+                    <div class="toggle-track" style="<?= $maintActive ? 'background:#D97706' : '' ?>" id="maintenanceTrack"></div>
                 </label>
             </div>
         </div>
@@ -265,7 +277,7 @@
                 <div class="set-action-title">Database Backup</div>
                 <div class="set-action-desc">Create a downloadable backup of your entire database</div>
             </div>
-            <button onclick="settingsBackup()" class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;flex-shrink:0">
+            <button onclick="settingsBackup(this)" class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;flex-shrink:0">
                 <span class="material-icons-round">backup</span>Create Backup
             </button>
         </div>
@@ -277,7 +289,7 @@
                 <div class="set-action-title">Clear System Cache</div>
                 <div class="set-action-desc">Flush cached data to free up space and refresh content</div>
             </div>
-            <button onclick="settingsClearCache()" class="btn btn-sm" style="background:#FFF7ED;color:#EA580C;border:1px solid #FED7AA;flex-shrink:0">
+            <button onclick="settingsClearCache(this)" class="btn btn-sm" style="background:#FFF7ED;color:#EA580C;border:1px solid #FED7AA;flex-shrink:0">
                 <span class="material-icons-round">delete_sweep</span>Clear Cache
             </button>
         </div>
@@ -287,6 +299,8 @@
 </div><!-- end padding shell -->
 
 <script>
+const _csrf = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+
 document.getElementById('settingsForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('settingsSaveBtn');
@@ -297,26 +311,48 @@ document.getElementById('settingsForm')?.addEventListener('submit', async (e) =>
         const data = await res.json();
         if (data.success) {
             showToast('Settings saved successfully!', 'success');
+            // Reload tab after short delay so maintenance banner + state refresh
+            setTimeout(() => location.href = '?tab=settings', 1000);
         } else {
             showToast(data.message || 'Failed to save settings', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons-round">save</span>Save Settings';
         }
     } catch (err) {
         showToast('An error occurred. Please try again.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons-round">save</span>Save Settings';
     }
-    btn.disabled = false;
-    btn.innerHTML = '<span class="material-icons-round">save</span>Save Settings';
 });
 
-async function settingsBackup() {
+function onMaintenanceToggle(cb) {
+    const row   = document.getElementById('maintenanceRow');
+    const track = document.getElementById('maintenanceTrack');
+    if (cb.checked) {
+        row.style.borderColor   = '#FCD34D';
+        row.style.background    = '#FFFBEB';
+        track.style.background  = '#D97706';
+    } else {
+        row.style.borderColor   = 'var(--border)';
+        row.style.background    = 'var(--canvas)';
+        track.style.background  = '';
+    }
+}
+
+async function settingsBackup(btn) {
     if (!confirm('Create a database backup? This may take a few moments.')) return;
-    const btn = event.target.closest('button');
     btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="animation:spin .8s linear infinite">refresh</span>Creating…';
     try {
-        const res  = await fetch('actions/backup_database.php', { method: 'POST' });
+        const fd = new FormData();
+        fd.append('csrf_token', _csrf());
+        const res  = await fetch('actions/backup_database.php', { method: 'POST', body: fd });
         const data = await res.json();
         if (data.success) {
-            showToast('Database backup created successfully!', 'success');
-            if (data.download_url) window.open(data.download_url, '_blank');
+            showToast('Backup created: ' + (data.filename || 'file'), 'success');
+            if (data.download_url) {
+                const a = Object.assign(document.createElement('a'), { href: data.download_url });
+                document.body.appendChild(a); a.click(); a.remove();
+            }
         } else {
             showToast(data.message || 'Failed to create backup', 'error');
         }
@@ -324,12 +360,13 @@ async function settingsBackup() {
     btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">backup</span>Create Backup';
 }
 
-async function settingsClearCache() {
+async function settingsClearCache(btn) {
     if (!confirm('Clear all cache? This action cannot be undone.')) return;
-    const btn = event.target.closest('button');
     btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="animation:spin .8s linear infinite">refresh</span>Clearing…';
     try {
-        const res  = await fetch('actions/clear_cache.php', { method: 'POST' });
+        const fd = new FormData();
+        fd.append('csrf_token', _csrf());
+        const res  = await fetch('actions/clear_cache.php', { method: 'POST', body: fd });
         const data = await res.json();
         showToast(data.success ? 'Cache cleared successfully!' : (data.message || 'Failed to clear cache'), data.success ? 'success' : 'error');
     } catch (err) { showToast('An error occurred. Please try again.', 'error'); }

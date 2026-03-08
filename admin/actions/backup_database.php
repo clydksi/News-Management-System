@@ -47,6 +47,7 @@ if ($returnVar === 0 && file_exists($backupFile) && filesize($backupFile) > 0) {
     echo json_encode([
         'success'      => true,
         'message'      => 'Backup created: ' . basename($backupFile),
+        'filename'     => basename($backupFile),
         'download_url' => 'actions/download_backup.php?file=' . urlencode(basename($backupFile)),
     ]);
 } else {

@@ -24,7 +24,8 @@ if (isset($_GET['debug']) && $_GET['debug'] === 'view-html') {
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>MediaStack News — Live Data</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Sora:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Sora:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 <style>
 /* ══════════════════════════════════════════════════════
@@ -50,8 +51,8 @@ if (isset($_GET['debug']) && $_GET['debug'] === 'view-html') {
     --sh:0 1px 4px rgba(0,0,0,.4);--sh-md:0 4px 18px rgba(0,0,0,.5);--sh-lg:0 20px 48px rgba(0,0,0,.7);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{height:100%;scroll-behavior:smooth}
-body{font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);min-height:100vh;transition:background .2s,color .2s;line-height:1.6}
+html{height:100%;scroll-behavior:smooth;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-synthesis:none}
+body{font-family:'Sora',sans-serif;font-size:15px;line-height:1.65;background:var(--canvas);color:var(--ink);min-height:100vh;transition:background .2s,color .2s}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-md);border-radius:99px}

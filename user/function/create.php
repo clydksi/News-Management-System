@@ -289,7 +289,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['ai_action']) && !iss
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AI Writer — New Article</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Sora:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Sora:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 <style>
 :root{
@@ -318,7 +319,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['ai_action']) && !iss
     --sh-lg:0 12px 36px rgba(0,0,0,.55);--sh-xl:0 24px 60px rgba(0,0,0,.65);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;font-family:'Sora',sans-serif;background:var(--canvas);color:var(--ink);transition:background .2s,color .2s}
+html{height:100%;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-synthesis:none}
+body{height:100%;overflow:hidden;font-family:'Sora',sans-serif;font-size:15px;line-height:1.65;background:var(--canvas);color:var(--ink);transition:background .2s,color .2s}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-md);border-radius:99px}

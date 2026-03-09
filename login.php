@@ -432,7 +432,7 @@ $savedUsernameForResend = $savedUsernameForResend ?? $savedUsername;
                 </div>
                 <!-- Resend form -->
                 <form method="POST" class="flex gap-2 mt-1">
-                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>"/>
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>"/>
                     <input type="hidden" name="action"     value="resend_verification"/>
                     <input type="hidden" name="username"   value="<?= $savedUsernameForResend ?>"/>
                     <button type="submit"
@@ -449,7 +449,7 @@ $savedUsernameForResend = $savedUsernameForResend ?? $savedUsername;
             <!-- ── Form Card ── -->
             <div class="glass rounded-2xl p-7 sm:p-8">
                 <form method="POST" id="loginForm" novalidate autocomplete="on">
-                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>"/>
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>"/>
                     <input type="hidden" name="action"     value="login"/>
 
                     <!-- Username -->
@@ -623,7 +623,7 @@ $savedUsernameForResend = $savedUsernameForResend ?? $savedUsername;
         </div>
 
         <form method="POST" id="forgotForm" onsubmit="handleForgotSubmit(event)">
-            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>"/>
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>"/>
             <input type="hidden" name="action"     value="forgot_password"/>
 
             <div class="relative mb-5">

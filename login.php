@@ -372,21 +372,6 @@ $savedUsernameForResend = $savedUsernameForResend ?? $savedUsername;
             </div>
         </div>
 
-        <!-- Testimonial -->
-        <div class="glass rounded-2xl p-6 max-w-[420px]">
-            <div class="flex gap-0.5 mb-4">
-                <?php for ($i = 0; $i < 5; $i++): ?>
-                <span class="material-symbols-outlined text-amber-400 text-base" style="font-variation-settings:'FILL' 1">star</span>
-                <?php endfor; ?>
-            </div>
-
-        <form method="post" id="loginForm">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-            <div class="form-group">
-                <input type="text" name="username" placeholder="Username" required>
-                <span class="icon">👤</span>
-            </div>
-        </div>
     </div>
 
     <!-- ───────────────── RIGHT PANEL (form) ───────────────── -->

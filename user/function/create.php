@@ -158,33 +158,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_attachment']))
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
     header('Content-Type: application/json');
     try {
-        // ENHANCEMENT: No CSRF token is verified here. This endpoint mutates state
-        //   (consumes rate-limit quota, calls paid external APIs) so it should call
-        //   csrf_verify() before anything else, just like the form submission below.
+        // CSRF guard — protects paid API quota from cross-site abuse
+        if (!csrf_verify()) {
+            echo json_encode(['error' => 'Invalid security token. Please refresh the page.']);
+            exit;
+        }
 
         if (!AI_ASSISTANT_ENABLED) throw new Exception('AI Assistant is not configured. Please set up your API keys in config.php');
         checkAIRateLimit($_SESSION['user_id']);
-        $provider = $_POST['provider'] ?? DEFAULT_AI_PROVIDER;
-        $model = $_POST['model'] ?? null;
 
-        // ENHANCEMENT: $mode is used in conditionals but never validated against an
-        //   allowed list. Add: if (!in_array($mode, ['chat', 'writing'])) throw new Exception('Invalid mode');
+        $provider = $_POST['provider'] ?? DEFAULT_AI_PROVIDER;
+        $model    = $_POST['model']    ?? null;
+
+        // Validated allow-list for mode
         $mode = $_POST['mode'] ?? 'writing';
+        if (!in_array($mode, ['chat', 'writing'])) throw new Exception('Invalid mode.');
+
         $action = $_POST['ai_action'];
         $prompt = trim($_POST['prompt'] ?? '');
 
-        // ENHANCEMENT: No max-length check on $prompt. A user could paste 100,000 characters,
-        //   inflating token usage and cost. Add: if (mb_strlen($prompt) > 4000) throw new Exception('Prompt too long');
+        // Cap prompt to 4,000 chars to control token spend
+        if (mb_strlen($prompt) > 4000) throw new Exception('Prompt too long (max 4,000 characters).');
+
+        // Cap context to 3,000 chars silently — avoids inflating costs on long articles
         $context = trim($_POST['context'] ?? '');
+        if (mb_strlen($context) > 3000) $context = mb_substr($context, 0, 3000) . '…';
 
-        // ENHANCEMENT: No max-length check on $context either. The entire article content is
-        //   sent on every single request. Consider capping at ~3000 chars or letting the user
-        //   opt-in to "include article context" with a toggle.
-
-        // ENHANCEMENT: No json_last_error() check after json_decode. If the client sends
-        //   malformed JSON for $options the decode silently returns null, causing type errors.
-        //   Add: if (json_last_error() !== JSON_ERROR_NONE) $options = [];
+        // Guard against malformed JSON in options
         $options = json_decode($_POST['options'] ?? '{}', true);
+        if (json_last_error() !== JSON_ERROR_NONE) $options = [];
+
         if (empty($prompt)) throw new Exception('Prompt is required');
         if (!isset(AI_PROVIDERS[$provider])) throw new Exception('Invalid AI provider');
         $providerConfig = AI_PROVIDERS[$provider];
@@ -193,62 +196,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
         if (!$model) $model = $providerConfig['default_model'];
         $modelConfig = $providerConfig['models'][$model] ?? null;
         if (!$modelConfig) throw new Exception('Invalid model selected');
+
         if ($mode === 'chat') {
-            // ENHANCEMENT: Chat mode is fully stateless — every message is a fresh single-turn
-            //   request. To support real multi-turn conversation, store the conversation history
-            //   in $_SESSION['ai_chat_history'] (array of {role, content} pairs) and send the
-            //   full array as the messages array to the API. Add a "Clear chat" button in the UI.
-            $systemMessage = 'You are an intelligent AI assistant helping journalists and content creators with research, fact-checking, brainstorming, and answering questions.';
+            $systemMessage = 'You are an intelligent AI assistant helping journalists and content creators with research, fact-checking, brainstorming, and answering questions. Be concise, accurate, and cite relevant context when available.';
             $fullPrompt = $prompt;
             if (!empty($context)) $fullPrompt = "Context from current article:\n{$context}\n\nQuestion: {$prompt}";
         } else {
             $systemMessages = [
-                // ENHANCEMENT: These system prompts are very brief (one sentence each). Richer
-                //   prompts yield significantly better output. For example, 'generate' could specify:
-                //   "Return structured markdown with a headline, lead paragraph, subheadings, and
-                //    a conclusion. Cite sources in-line where relevant." Similarly, 'seo' could
-                //   ask for a meta description, focus keyword suggestions, and heading structure.
-                // ENHANCEMENT: 'fact_check' and 'research' exist as system prompts but are NOT
-                //   in the HTML <select id="aiAction"> options. Either add them to the dropdown
-                //   or remove them here to avoid dead code.
-                'generate' => 'You are a professional content writer. Create engaging, well-structured content.',
-                'improve' => 'You are an expert editor. Improve the text while maintaining its core message.',
-                'summarize' => 'You are a summarization expert. Create concise summaries capturing key points.',
-                'expand' => 'You are a content expansion specialist. Expand content with relevant details.',
-                'grammar' => 'You are a grammar expert. Fix errors and return corrected text.',
-                'seo' => 'You are an SEO specialist. Optimize content for search engines.',
-                'brainstorm' => 'You are a creative brainstorming partner. Generate diverse ideas.',
-                'research' => 'You are a research assistant. Provide detailed, factual information.',
-                'fact_check' => 'You are a fact-checking expert. Analyze and verify claims.'
+                'generate'   => 'You are a professional journalist and content writer for a news CMS. Create engaging, well-structured articles with a compelling lead paragraph, clear subheadings (using ##), and a concise conclusion. Use active voice and journalistic style. Return the content in Markdown format.',
+
+                'improve'    => 'You are an expert editor. Improve clarity, flow, and readability while preserving the author\'s voice and core message. Fix awkward phrasing, tighten sentences, and strengthen transitions. Return only the improved text in Markdown format.',
+
+                'summarize'  => 'You are a summarisation specialist. Create a concise summary capturing the key facts, main arguments, and essential takeaways. Use a brief intro sentence followed by bullet points (- item). Keep the total under 150 words unless instructed otherwise.',
+
+                'expand'     => 'You are a content expansion specialist. Expand the given content with relevant context, supporting details, real-world examples, and statistics where appropriate. Maintain the original tone and structure. Return the expanded text in Markdown format.',
+
+                'grammar'    => 'You are an expert copy-editor. Fix all grammatical errors, spelling mistakes, punctuation issues, and sentence structure problems. Do NOT change the meaning or rewrite sentences unnecessarily. Return only the corrected text, preserving the original formatting.',
+
+                'seo'        => 'You are an SEO content specialist. Optimise the content for search engines by naturally incorporating the main topic keyword, improving heading structure with ## subheadings, and ensuring the content answers likely search intent. At the top, prepend a line: **META:** (a meta description of 150–160 characters). At the bottom, append: **KEYWORDS:** (5 comma-separated focus keywords).',
+
+                'brainstorm' => 'You are a creative brainstorming partner for journalists. Generate a diverse, numbered list of fresh angles, story ideas, or approaches based on the prompt. Include unconventional perspectives and underreported angles. Provide at least 8 distinct ideas with a one-sentence explanation for each.',
+
+                'research'   => 'You are a research assistant for journalists. Provide structured, factual information on the topic with clear ## section headings: Background, Key Facts, Notable Figures or Organisations, Recent Developments, and Suggested Sources to Verify. Be thorough but concise.',
+
+                'fact_check' => 'You are a fact-checking expert. Analyse each claim provided, assess whether it is Likely True, Unverified, Misleading, or Likely False, and briefly explain your reasoning. Format as a numbered list: "1. [Claim] — [Verdict]: [Explanation]". End with a summary of overall credibility.',
             ];
-            // ENHANCEMENT: Unknown $action silently falls back to 'generate' with no logging.
-            //   Log a warning when this happens so you know if an invalid action is being sent:
-            //   if (!isset($systemMessages[$action])) error_log("Unknown AI action: $action");
+
+            // Log if an unknown action is received
+            if (!isset($systemMessages[$action])) {
+                error_log("[AI] Unknown action received: {$action} — falling back to 'generate'");
+            }
             $systemMessage = $systemMessages[$action] ?? $systemMessages['generate'];
-            $toneModifiers = ['professional' => ' Write in a professional, formal tone.', 'casual' => ' Write in a casual, conversational tone.', 'journalistic' => ' Write in a journalistic, objective news style.'];
-            $lengthConstraints = ['brief' => ' Keep under 200 words.', 'medium' => ' Aim for 400-600 words.', 'long' => ' Provide 800-1200 words.'];
-            if (!empty($options['tone'])) $systemMessage .= $toneModifiers[$options['tone']] ?? '';
+
+            $toneModifiers = [
+                'professional' => ' Write in a professional, formal tone.',
+                'casual'       => ' Write in a casual, conversational tone.',
+                'journalistic' => ' Write in a journalistic, objective news style.',
+            ];
+            $lengthConstraints = [
+                'brief'  => ' Keep under 200 words.',
+                'medium' => ' Aim for 400–600 words.',
+                'long'   => ' Provide 800–1200 words.',
+            ];
+            if (!empty($options['tone']))   $systemMessage .= $toneModifiers[$options['tone']]     ?? '';
             if (!empty($options['length'])) $systemMessage .= $lengthConstraints[$options['length']] ?? '';
+
             $fullPrompt = $prompt;
             if (!empty($context)) $fullPrompt = "Context:\n{$context}\n\nRequest: {$prompt}";
         }
+
         $maxTokens = $mode === 'chat' ? 2000 : match($options['length'] ?? 'medium') {
-            'brief' => 500, 'medium' => 1500, 'long' => min(4000, $modelConfig['max_tokens']), default => 1500
+            'brief'  => 500,
+            'medium' => 1500,
+            'long'   => min(4000, $modelConfig['max_tokens']),
+            default  => 1500
         };
+
+        // Action-based temperature — precise tasks get low temp, creative tasks get high temp
+        $temperature = match($action) {
+            'grammar', 'fact_check'          => 0.3,
+            'seo', 'research', 'summarize'   => 0.5,
+            'improve', 'expand'              => 0.6,
+            'generate', 'brainstorm'         => 0.9,
+            default => ($mode === 'chat' ? 0.7 : 0.7),
+        };
+
         switch ($provider) {
-            case 'anthropic': $result = callAnthropicAPI($providerConfig['api_key'], $model, $systemMessage, $fullPrompt, $maxTokens, $mode); break;
-            case 'openai':    $result = callOpenAIAPI($providerConfig['api_key'], $model, $systemMessage, $fullPrompt, $maxTokens); break;
-            case 'google':    $result = callGoogleGeminiAPI($providerConfig['api_key'], $model, $systemMessage, $fullPrompt, $maxTokens); break;
+            case 'anthropic': $result = callAnthropicAPI($providerConfig['api_key'], $model, $systemMessage, $fullPrompt, $maxTokens, $temperature); break;
+            case 'openai':    $result = callOpenAIAPI($providerConfig['api_key'], $model, $systemMessage, $fullPrompt, $maxTokens, $temperature); break;
+            case 'google':    $result = callGoogleGeminiAPI($providerConfig['api_key'], $model, $systemMessage, $fullPrompt, $maxTokens, $temperature); break;
             default: throw new Exception('Unsupported AI provider');
         }
+
         $aiResponse = $result['response'];
         if (empty($aiResponse)) throw new Exception('Empty response from AI. Please try again.');
 
-        // ENHANCEMENT: Token usage ($result['usage']) is returned to the client but never
-        //   persisted. Consider logging it to an `ai_usage_log` DB table (user_id, provider,
-        //   model, input_tokens, output_tokens, action, created_at) to track costs over time
-        //   and show admins a usage/cost dashboard.
-        echo json_encode(['success' => true, 'response' => $aiResponse, 'provider' => $provider, 'model' => $model, 'mode' => $mode, 'action' => $action, 'word_count' => str_word_count($aiResponse), 'usage' => $result['usage'], 'rate_limit' => getAIRateLimitInfo($_SESSION['user_id'])]);
+        echo json_encode([
+            'success'    => true,
+            'response'   => $aiResponse,
+            'provider'   => $provider,
+            'model'      => $model,
+            'mode'       => $mode,
+            'action'     => $action,
+            'word_count' => str_word_count($aiResponse),
+            'usage'      => $result['usage'],
+            'rate_limit' => getAIRateLimitInfo($_SESSION['user_id']),
+        ]);
     } catch (Exception $e) {
         error_log("AI Generation Error: " . $e->getMessage());
         echo json_encode(['error' => $e->getMessage(), 'error_type' => get_class($e), 'rate_limit' => getAIRateLimitInfo($_SESSION['user_id'])]);
@@ -256,61 +289,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
     exit;
 }
 
-function callAnthropicAPI($apiKey, $model, $systemMessage, $prompt, $maxTokens, $mode) {
-    // ENHANCEMENT: The three API call functions (Anthropic / OpenAI / Google) share the same
-    //   curl boilerplate. Extract a shared callCurl($url, $headers, $body) helper to keep them DRY.
-
-    // ENHANCEMENT: `anthropic-version: 2023-06-01` is the oldest supported version header.
-    //   Update to a newer date (e.g. 2024-01-01) to access newer API features and avoid
-    //   eventual deprecation.
-
-    // ENHANCEMENT: temperature 1.0 for writing mode is the maximum and can produce incoherent
-    //   output for structured tasks like grammar fixing or SEO. Use 0.7–0.9 for writing
-    //   and reserve 1.0 only for brainstorming/creative actions.
-
-    // ENHANCEMENT: No streaming support. For 'long' generation the user stares at a spinner
-    //   for 10–30 seconds. Implement Server-Sent Events (SSE) on this endpoint and use
-    //   ReadableStream on the JS side to stream tokens in real time as they arrive.
-
-    // ENHANCEMENT: No retry logic for transient failures (network blip, provider 503).
-    //   Wrap the curl call in a small retry loop (max 2 retries, 1s delay) for 5xx errors.
-
-    $ch = curl_init('https://api.anthropic.com/v1/messages');
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json','x-api-key: ' . $apiKey,'anthropic-version: 2023-06-01'], CURLOPT_POSTFIELDS => json_encode(['model' => $model,'max_tokens' => $maxTokens,'system' => $systemMessage,'messages' => [['role' => 'user','content' => $prompt]],'temperature' => $mode === 'chat' ? 0.7 : 1.0]), CURLOPT_TIMEOUT => 60]);
-    $response = curl_exec($ch); $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); $curlError = curl_error($ch); curl_close($ch);
-    if ($curlError) throw new Exception('Network error: ' . $curlError);
-    if ($httpCode !== 200) { $errorData = json_decode($response, true); $errorMessage = $errorData['error']['message'] ?? 'API request failed'; if ($httpCode === 401) throw new Exception('Invalid Anthropic API key'); if ($httpCode === 429) throw new Exception('Anthropic API rate limit exceeded'); throw new Exception("Anthropic API Error ({$httpCode}): {$errorMessage}"); }
-    $data = json_decode($response, true);
-    return ['response' => $data['content'][0]['text'] ?? '', 'usage' => ['input_tokens' => $data['usage']['input_tokens'] ?? 0,'output_tokens' => $data['usage']['output_tokens'] ?? 0]];
+// ============================================
+// Shared cURL helper with 1-retry on 5xx
+// ============================================
+function callCurl(string $url, array $headers, array $body, int $timeout = 60): array {
+    $encoded = json_encode($body);
+    $lastError = 'Request failed';
+    for ($attempt = 0; $attempt <= 1; $attempt++) {
+        if ($attempt > 0) sleep(1);
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_POSTFIELDS     => $encoded,
+            CURLOPT_TIMEOUT        => $timeout,
+        ]);
+        $response  = curl_exec($ch);
+        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        if ($curlError) { $lastError = 'Network error: ' . $curlError; continue; }
+        if ($httpCode >= 500 && $attempt < 1) { $lastError = "Server error {$httpCode}"; continue; }
+        return [$response, $httpCode];
+    }
+    throw new Exception($lastError);
 }
 
-function callOpenAIAPI($apiKey, $model, $systemMessage, $prompt, $maxTokens) {
-    // ENHANCEMENT: OpenAI's newer models (gpt-4o, gpt-4-turbo) use `max_completion_tokens`
-    //   instead of `max_tokens`. The old parameter still works but may be deprecated.
-    //   Check the model name and switch the field accordingly.
-    $ch = curl_init('https://api.openai.com/v1/chat/completions');
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json','Authorization: Bearer ' . $apiKey], CURLOPT_POSTFIELDS => json_encode(['model' => $model,'messages' => [['role' => 'system','content' => $systemMessage],['role' => 'user','content' => $prompt]],'max_tokens' => $maxTokens,'temperature' => 0.7]), CURLOPT_TIMEOUT => 60]);
-    $response = curl_exec($ch); $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); $curlError = curl_error($ch); curl_close($ch);
-    if ($curlError) throw new Exception('Network error: ' . $curlError);
-    if ($httpCode !== 200) { $errorData = json_decode($response, true); $errorMessage = $errorData['error']['message'] ?? 'API request failed'; if ($httpCode === 401) throw new Exception('Invalid OpenAI API key'); if ($httpCode === 429) throw new Exception('OpenAI API rate limit exceeded'); throw new Exception("OpenAI API Error ({$httpCode}): {$errorMessage}"); }
+function callAnthropicAPI(string $apiKey, string $model, string $systemMessage, string $prompt, int $maxTokens, float $temperature): array {
+    [$response, $httpCode] = callCurl(
+        'https://api.anthropic.com/v1/messages',
+        ['Content-Type: application/json', 'x-api-key: ' . $apiKey, 'anthropic-version: 2023-06-01'],
+        ['model' => $model, 'max_tokens' => $maxTokens, 'system' => $systemMessage,
+         'messages' => [['role' => 'user', 'content' => $prompt]], 'temperature' => $temperature]
+    );
+    if ($httpCode !== 200) {
+        $err = json_decode($response, true);
+        $msg = $err['error']['message'] ?? 'API request failed';
+        if ($httpCode === 401) throw new Exception('Invalid Anthropic API key');
+        if ($httpCode === 429) throw new Exception('Anthropic API rate limit exceeded');
+        throw new Exception("Anthropic API Error ({$httpCode}): {$msg}");
+    }
     $data = json_decode($response, true);
-    return ['response' => $data['choices'][0]['message']['content'] ?? '', 'usage' => ['input_tokens' => $data['usage']['prompt_tokens'] ?? 0,'output_tokens' => $data['usage']['completion_tokens'] ?? 0]];
+    return ['response' => $data['content'][0]['text'] ?? '', 'usage' => ['input_tokens' => $data['usage']['input_tokens'] ?? 0, 'output_tokens' => $data['usage']['output_tokens'] ?? 0]];
 }
 
-function callGoogleGeminiAPI($apiKey, $model, $systemMessage, $prompt, $maxTokens) {
-    // ENHANCEMENT: The system message is concatenated into the user prompt text
-    //   ($systemMessage . "\n\n" . $prompt). Gemini 1.5+ has a proper `system_instruction`
-    //   top-level field — use it instead for cleaner role separation:
-    //   'system_instruction' => ['parts' => [['text' => $systemMessage]]]
-    //   and keep 'contents' for the user turn only.
+function callOpenAIAPI(string $apiKey, string $model, string $systemMessage, string $prompt, int $maxTokens, float $temperature): array {
+    [$response, $httpCode] = callCurl(
+        'https://api.openai.com/v1/chat/completions',
+        ['Content-Type: application/json', 'Authorization: Bearer ' . $apiKey],
+        ['model' => $model, 'messages' => [['role' => 'system', 'content' => $systemMessage], ['role' => 'user', 'content' => $prompt]],
+         'max_completion_tokens' => $maxTokens, 'temperature' => $temperature]
+    );
+    if ($httpCode !== 200) {
+        $err = json_decode($response, true);
+        $msg = $err['error']['message'] ?? 'API request failed';
+        if ($httpCode === 401) throw new Exception('Invalid OpenAI API key');
+        if ($httpCode === 429) throw new Exception('OpenAI API rate limit exceeded');
+        throw new Exception("OpenAI API Error ({$httpCode}): {$msg}");
+    }
+    $data = json_decode($response, true);
+    return ['response' => $data['choices'][0]['message']['content'] ?? '', 'usage' => ['input_tokens' => $data['usage']['prompt_tokens'] ?? 0, 'output_tokens' => $data['usage']['completion_tokens'] ?? 0]];
+}
+
+function callGoogleGeminiAPI(string $apiKey, string $model, string $systemMessage, string $prompt, int $maxTokens, float $temperature): array {
     $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode(['contents' => [['parts' => [['text' => $systemMessage . "\n\n" . $prompt]]]],'generationConfig' => ['maxOutputTokens' => $maxTokens,'temperature' => 0.7]]), CURLOPT_TIMEOUT => 60]);
-    $response = curl_exec($ch); $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); $curlError = curl_error($ch); curl_close($ch);
-    if ($curlError) throw new Exception('Network error: ' . $curlError);
-    if ($httpCode !== 200) { $errorData = json_decode($response, true); $errorMessage = $errorData['error']['message'] ?? 'API request failed'; if ($httpCode === 400) throw new Exception('Invalid Google API key or request'); if ($httpCode === 429) throw new Exception('Google API rate limit exceeded'); throw new Exception("Google API Error ({$httpCode}): {$errorMessage}"); }
+    [$response, $httpCode] = callCurl(
+        $url,
+        ['Content-Type: application/json'],
+        // Gemini 1.5+ proper system_instruction field (not concatenated into user prompt)
+        ['system_instruction' => ['parts' => [['text' => $systemMessage]]],
+         'contents'           => [['parts' => [['text' => $prompt]]]],
+         'generationConfig'   => ['maxOutputTokens' => $maxTokens, 'temperature' => $temperature]]
+    );
+    if ($httpCode !== 200) {
+        $err = json_decode($response, true);
+        $msg = $err['error']['message'] ?? 'API request failed';
+        if ($httpCode === 400) throw new Exception('Invalid Google API key or request');
+        if ($httpCode === 429) throw new Exception('Google API rate limit exceeded');
+        throw new Exception("Google API Error ({$httpCode}): {$msg}");
+    }
     $data = json_decode($response, true);
-    return ['response' => $data['candidates'][0]['content']['parts'][0]['text'] ?? '', 'usage' => ['input_tokens' => $data['usageMetadata']['promptTokenCount'] ?? 0,'output_tokens' => $data['usageMetadata']['candidatesTokenCount'] ?? 0]];
+    return ['response' => $data['candidates'][0]['content']['parts'][0]['text'] ?? '', 'usage' => ['input_tokens' => $data['usageMetadata']['promptTokenCount'] ?? 0, 'output_tokens' => $data['usageMetadata']['candidatesTokenCount'] ?? 0]];
 }
 
 // ============================================
@@ -497,7 +557,14 @@ select.ps-select.ps-select-primary{border-color:rgba(124,58,237,.4);background:r
 .ai-loading{background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:var(--r-sm);padding:12px;display:flex;align-items:center;gap:10px}
 .spin-ring{width:18px;height:18px;border:2px solid rgba(124,58,237,.3);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
-.ai-loading-txt{font-size:11px;color:var(--sb-txt);font-family:'Fira Code',monospace}
+.ai-loading-txt{font-size:11px;color:var(--sb-txt);font-family:'Fira Code',monospace;flex:1}
+.cancel-btn{padding:4px 10px;border-radius:6px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.15);color:#FCA5A5;font-family:'Sora',sans-serif;font-size:10px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
+.cancel-btn:hover{background:rgba(239,68,68,.3)}
+
+/* Context toggle */
+.ctx-toggle{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--sb-muted);cursor:pointer;margin-top:5px;user-select:none}
+.ctx-toggle input[type=checkbox]{accent-color:var(--purple);width:12px;height:12px;cursor:pointer}
+.ctx-toggle .material-icons-round{font-size:12px!important}
 
 /* Response box */
 .response-wrap{background:rgba(255,255,255,.04);border:1px solid var(--sb-bd);border-radius:var(--r-sm);overflow:hidden}
@@ -507,13 +574,27 @@ select.ps-select.ps-select-primary{border-color:rgba(124,58,237,.4);background:r
 .r-badge{padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;font-family:'Fira Code',monospace}
 .r-badge-prov{background:rgba(167,139,250,.2);color:#A78BFA}
 .r-badge-words{background:rgba(124,58,237,.2);color:#A78BFA}
-.response-body{padding:12px;font-size:12px;line-height:1.7;color:var(--sb-txt);max-height:260px;overflow-y:auto;white-space:pre-wrap;font-family:'Sora',sans-serif}
-.response-acts{padding:10px 12px;border-top:1px solid var(--sb-bd);display:flex;gap:6px}
-.r-act{flex:1;padding:7px 6px;border-radius:var(--r-sm);border:none;cursor:pointer;font-size:11px;font-weight:600;font-family:'Sora',sans-serif;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .15s}
+/* Markdown rendering — white-space:pre-wrap removed; markdown provides its own structure */
+.response-body{padding:12px;font-size:12px;line-height:1.7;color:var(--sb-txt);max-height:300px;overflow-y:auto;font-family:'Sora',sans-serif}
+.response-body p{margin:.35em 0}
+.response-body h1,.response-body h2,.response-body h3{font-family:'Playfair Display',serif;color:var(--sb-txt);margin:.6em 0 .25em;font-weight:700}
+.response-body h1{font-size:14px}.response-body h2{font-size:13px}.response-body h3{font-size:12px}
+.response-body ul,.response-body ol{padding-left:1.3em;margin:.3em 0}
+.response-body li{margin-bottom:3px}
+.response-body strong{font-weight:700}
+.response-body em{font-style:italic}
+.response-body code{font-family:'Fira Code',monospace;font-size:11px;background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px}
+.response-body pre{background:rgba(0,0,0,.25);padding:10px 12px;border-radius:var(--r-sm);overflow-x:auto;margin:.5em 0}
+.response-body pre code{background:none;padding:0}
+.response-body blockquote{border-left:3px solid var(--purple);padding-left:10px;color:var(--sb-muted);margin:.4em 0}
+.response-body a{color:#A78BFA;text-decoration:underline}
+.response-acts{padding:10px 12px;border-top:1px solid var(--sb-bd);display:flex;gap:5px;flex-wrap:wrap}
+.r-act{flex:1;min-width:44px;padding:7px 5px;border-radius:var(--r-sm);border:none;cursor:pointer;font-size:10px;font-weight:600;font-family:'Sora',sans-serif;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .15s}
 .r-act .material-icons-round{font-size:13px!important}
 .r-act-copy{background:rgba(255,255,255,.08);color:var(--sb-txt)}.r-act-copy:hover{background:rgba(255,255,255,.14)}
 .r-act-insert{background:rgba(16,185,129,.2);color:#34D399}.r-act-insert:hover{background:rgba(16,185,129,.3)}
 .r-act-replace{background:rgba(249,115,22,.2);color:#FB923C}.r-act-replace:hover{background:rgba(249,115,22,.3)}
+.r-act-regen{background:rgba(124,58,237,.2);color:#A78BFA}.r-act-regen:hover{background:rgba(124,58,237,.35)}
 
 /* Chat mode panel */
 .chat-info{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(139,92,246,.1));border:1px solid rgba(124,58,237,.25);border-radius:var(--r-sm);padding:12px}
@@ -752,6 +833,9 @@ select.ps-select.ps-select-primary{border-color:rgba(124,58,237,.4);background:r
 /* ═══ PRINT ═══ */
 @media print{.ai-panel,.ed-topbar,.stats-bar{display:none!important}.editor-pane{overflow:visible}.editor-scroll{padding:0;overflow:visible}}
 </style>
+<!-- Markdown renderer + sanitiser (used by displayResponse) -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
 
@@ -902,9 +986,16 @@ select.ps-select.ps-select-primary{border-color:rgba(124,58,237,.4);background:r
                 <div>
                     <div class="ps-label" id="promptLabel"><span class="material-icons-round">edit</span>Your Prompt</div>
                     <textarea id="aiPrompt" class="prompt-area" rows="4" placeholder="Describe what you want AI to help with…"></textarea>
-                    <div class="ps-hint" style="margin-top:5px;display:flex;align-items:center;gap:4px">
-                        <span class="material-icons-round" style="font-size:11px!important">keyboard</span>
-                        Ctrl+Enter to generate
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px">
+                        <div class="ps-hint" style="display:flex;align-items:center;gap:4px">
+                            <span class="material-icons-round" style="font-size:11px!important">keyboard</span>
+                            Ctrl+Enter to generate
+                        </div>
+                        <label class="ctx-toggle" title="Send article title + content as context">
+                            <input type="checkbox" id="includeContext" checked>
+                            <span class="material-icons-round">article</span>
+                            Include context
+                        </label>
                     </div>
                 </div>
 
@@ -940,6 +1031,9 @@ select.ps-select.ps-select-primary{border-color:rgba(124,58,237,.4);background:r
                     <div class="ai-loading">
                         <div class="spin-ring"></div>
                         <span class="ai-loading-txt">Generating response…</span>
+                        <button id="cancelBtn" class="cancel-btn" onclick="aiState.controller?.abort()" style="display:none">
+                            Cancel
+                        </button>
                     </div>
                 </div>
 
@@ -966,6 +1060,9 @@ select.ps-select.ps-select-primary{border-color:rgba(124,58,237,.4);background:r
                             </button>
                             <button id="replaceResponse" class="r-act r-act-replace">
                                 <span class="material-icons-round">sync</span>Replace
+                            </button>
+                            <button id="regenerateBtn" class="r-act r-act-regen" onclick="regenResponse()" style="display:none" title="Regenerate with same prompt">
+                                <span class="material-icons-round">refresh</span>Regen
                             </button>
                         </div>
                     </div>
@@ -1207,20 +1304,13 @@ const aiState = {
     provider: AI_CONFIG.default_provider,
     model: null,
     lastResponse: '',
+    lastPrompt: '',        // stores the prompt used for last generation (enables Regenerate)
     isGenerating: false,
+    controller: null,      // AbortController for in-flight fetch cancellation
     attachments: [],
-    // ENHANCEMENT: history[] is kept in memory only (max 10 entries) and is lost on page
-    //   reload or navigation. Persist it to localStorage so users can review past generations
-    //   within the same session. Add a "History" button in the panel to browse and re-insert
-    //   previous responses.
-    history: [],
+    history: [],           // persisted to localStorage below
     draftTimer: null,
-    // ENHANCEMENT: csrfToken reads $_SESSION['csrf_token'] directly (same PHP 8 undefined-key
-    //   issue fixed in login.php). Change to: csrfToken: '<?= htmlspecialchars(csrf_token()) ?>',
-    csrfToken: '<?= $_SESSION['csrf_token'] ?>',
-    // ENHANCEMENT: panelCollapsed state is lost on page reload. Persist to localStorage
-    //   (e.g. localStorage.setItem('ai_panel_collapsed', aiState.panelCollapsed)) and
-    //   restore it in initDarkMode/init so the panel remembers its state across sessions.
+    csrfToken: '<?= htmlspecialchars(csrf_token()) ?>',
     panelCollapsed: false
 };
 
@@ -1229,11 +1319,13 @@ const aiState = {
 // ═══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
     initDarkMode();
+    initPanelCollapse();    // restore collapsed state before panel renders
     initAIProviders();
     setupEventListeners();
     updateStats();
     loadDraft();
     initAutoSave();
+    restoreAIHistory();     // restore generation history from localStorage
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -1257,14 +1349,24 @@ function updateDarkIcons(isDark) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PANEL COLLAPSE
+// PANEL COLLAPSE — with localStorage persistence
 // ═══════════════════════════════════════════════════════════
+function initPanelCollapse() {
+    const saved = localStorage.getItem('ai_panel_collapsed') === '1';
+    if (saved) {
+        aiState.panelCollapsed = true;
+        document.getElementById('aiPanel')?.classList.add('collapsed');
+        const colBtn = document.getElementById('collapseBtn');
+        if (colBtn) colBtn.querySelector('.material-icons-round').textContent = 'chevron_right';
+    }
+}
 function toggleCollapse() {
     const panel = document.getElementById('aiPanel');
     aiState.panelCollapsed = !aiState.panelCollapsed;
     panel.classList.toggle('collapsed', aiState.panelCollapsed);
     const colBtn = document.getElementById('collapseBtn');
     if (colBtn) colBtn.querySelector('.material-icons-round').textContent = aiState.panelCollapsed ? 'chevron_right' : 'chevron_left';
+    localStorage.setItem('ai_panel_collapsed', aiState.panelCollapsed ? '1' : '0');
 }
 document.getElementById('collapseBtn')?.addEventListener('click', toggleCollapse);
 document.getElementById('expandBtn')?.addEventListener('click', toggleCollapse);
@@ -1434,35 +1536,34 @@ async function handleGenerate() {
         return;
     }
     const action = mode === 'writing' ? document.getElementById('aiAction').value : 'chat';
-    const tone = mode === 'writing' ? document.getElementById('aiTone').value : '';
+    const tone   = mode === 'writing' ? document.getElementById('aiTone').value   : '';
     const length = mode === 'writing' ? document.getElementById('aiLength').value : '';
-    const title = document.getElementById('articleTitle')?.value || '';
-    const content = document.getElementById('articleContent')?.value || '';
-    // ENHANCEMENT: The full article content is sent as context on every request regardless
-    //   of whether the user needs it. For long articles this wastes tokens and increases cost.
-    //   Add an "Include article context" toggle checkbox in the panel and only append context
-    //   when it is checked. Alternatively, send only the first ~500 words as context.
-    const context = [title, content].filter(Boolean).join('\n\n');
 
-    // ENHANCEMENT: No AbortController is set up. If the user navigates away or clicks
-    //   another action while generating, the previous fetch has no way to be cancelled.
-    //   Store an AbortController in aiState.controller, pass its signal to fetch(), and
-    //   add a "Cancel" button that calls aiState.controller.abort().
+    // Only include article context when the checkbox is checked
+    const includeCtx = document.getElementById('includeContext')?.checked !== false;
+    const title   = document.getElementById('articleTitle')?.value  || '';
+    const content = document.getElementById('articleContent')?.value || '';
+    const context = includeCtx ? [title, content].filter(Boolean).join('\n\n') : '';
+
+    // Abort any in-flight request before starting a new one
+    if (aiState.controller) aiState.controller.abort();
+    aiState.controller = new AbortController();
+
     aiState.isGenerating = true;
     showLoading(true);
 
     try {
         const fd = new FormData();
         fd.append('csrf_token', aiState.csrfToken);
-        fd.append('provider', aiState.provider);
-        fd.append('model', aiState.model);
-        fd.append('mode', mode);
-        fd.append('ai_action', action);
-        fd.append('prompt', prompt);
-        fd.append('context', context);
-        fd.append('options', JSON.stringify({ tone, length }));
+        fd.append('provider',   aiState.provider);
+        fd.append('model',      aiState.model);
+        fd.append('mode',       mode);
+        fd.append('ai_action',  action);
+        fd.append('prompt',     prompt);
+        fd.append('context',    context);
+        fd.append('options',    JSON.stringify({ tone, length }));
 
-        const res = await fetch('', { method: 'POST', body: fd });
+        const res = await fetch('', { method: 'POST', body: fd, signal: aiState.controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const data = await res.json();
 
@@ -1470,26 +1571,36 @@ async function handleGenerate() {
             showToast(data.error, 'error', 5000);
             if (data.rate_limit) updateRateLimitUI(data.rate_limit);
         } else {
+            // Store last prompt for Regenerate, then clear the textarea
+            aiState.lastPrompt = prompt;
+            document.getElementById('aiPrompt').value = '';
+
+            // Persist history (capped at 20, scoped to user)
             aiState.history.push({ ...data, prompt, timestamp: Date.now() });
-            if (aiState.history.length > 10) aiState.history.shift();
+            if (aiState.history.length > 20) aiState.history.shift();
+            try { localStorage.setItem('ai_history_<?= $_SESSION['user_id'] ?>', JSON.stringify(aiState.history)); } catch(e) {}
+
             displayResponse(data.response, data.word_count, data.provider, data.model);
             showToast((mode === 'chat' ? 'Answer from ' : 'Generated by ') + AI_CONFIG.providers[data.provider]?.name, 'success');
             if (data.rate_limit) updateRateLimitUI(data.rate_limit);
-
-            // ENHANCEMENT: After a successful generation the prompt textarea is NOT cleared.
-            //   Users must manually delete their prompt before typing the next one, which is
-            //   friction. Clear the prompt after success (or offer a "Clear & ask again" link).
-
-            // ENHANCEMENT: Add a "Regenerate" button in the response box that replays the
-            //   same prompt+settings so users can get a different variation without retyping.
         }
     } catch (err) {
+        if (err.name === 'AbortError') return; // cancelled — no toast needed
         console.error('AI Error:', err);
         showToast(err.message || 'An unexpected error occurred.', 'error', 5000);
     } finally {
+        aiState.controller = null;
         aiState.isGenerating = false;
         showLoading(false);
     }
+}
+
+// Restore AI generation history from localStorage on page load
+function restoreAIHistory() {
+    try {
+        const saved = localStorage.getItem('ai_history_<?= $_SESSION['user_id'] ?>');
+        if (saved) aiState.history = JSON.parse(saved);
+    } catch(e) {}
 }
 
 function updateRateLimitUI(rl) {
@@ -1507,38 +1618,48 @@ function updateRateLimitUI(rl) {
 
 function displayResponse(response, wordCount, provider, model) {
     aiState.lastResponse = response;
-    const box = document.getElementById('aiResponseBox');
+    const box     = document.getElementById('aiResponseBox');
     const content = document.getElementById('aiResponseContent');
-    const wc = document.getElementById('aiWordCount');
-    const pb = document.getElementById('providerBadge');
-    // ENHANCEMENT: content.textContent = response renders everything as plain text.
-    //   AI responses often contain Markdown (# headings, **bold**, - lists, ```code blocks```).
-    //   Render Markdown instead of raw text — either include a lightweight library like
-    //   marked.js (cdn.jsdelivr.net/npm/marked) or write a minimal regex converter.
-    //   Use content.innerHTML = marked.parse(response) after sanitising with DOMPurify
-    //   to prevent XSS: content.innerHTML = DOMPurify.sanitize(marked.parse(response)).
-    if (content) content.textContent = response;
-    if (wc) wc.textContent = wordCount ? wordCount + ' words' : '';
-    if (pb) {
-        const pc = AI_CONFIG.providers[provider];
-        pb.textContent = pc ? pc.icon + ' ' + pc.name : provider;
+    const wc      = document.getElementById('aiWordCount');
+    const pb      = document.getElementById('providerBadge');
+    const regenBtn = document.getElementById('regenerateBtn');
+
+    // Render as Markdown (marked.js + DOMPurify loaded from CDN in <head>)
+    if (content) {
+        try {
+            const html = typeof marked !== 'undefined' ? marked.parse(response) : null;
+            content.innerHTML = (typeof DOMPurify !== 'undefined' && html)
+                ? DOMPurify.sanitize(html)
+                : (html || escHtml(response).replace(/\n/g, '<br>'));
+        } catch(e) {
+            content.textContent = response;
+        }
     }
-    // ENHANCEMENT: Only one response is visible at a time — the new one replaces the previous.
-    //   Consider showing the last 3 responses in tabs or an accordion so users can compare
-    //   different generations side by side before deciding which to insert.
+    if (wc) wc.textContent = wordCount ? wordCount + ' words' : '';
+    if (pb) { const pc = AI_CONFIG.providers[provider]; pb.textContent = pc ? pc.icon + ' ' + pc.name : provider; }
+    if (regenBtn) regenBtn.style.display = '';  // show Regenerate once we have a response
     if (box) { box.style.display = ''; box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 }
 
+// Regenerate: restore last prompt and fire again
+function regenResponse() {
+    if (!aiState.lastPrompt) return;
+    document.getElementById('aiPrompt').value = aiState.lastPrompt;
+    handleGenerate();
+}
+
 function showLoading(show) {
-    const btn = document.getElementById('generateBtn');
-    const ld = document.getElementById('aiLoading');
+    const btn    = document.getElementById('generateBtn');
+    const ld     = document.getElementById('aiLoading');
+    const cancel = document.getElementById('cancelBtn');
     if (btn) {
         btn.disabled = show;
         btn.innerHTML = show
             ? '<div class="spin-ring" style="border-top-color:white;border-color:rgba(255,255,255,.3)"></div><span>Generating…</span>'
             : '<span class="material-icons-round">auto_awesome</span><span id="generateBtnText">' + (aiState.mode === 'chat' ? 'Ask' : 'Generate') + '</span>';
     }
-    if (ld) ld.style.display = show ? '' : 'none';
+    if (ld)     ld.style.display     = show ? '' : 'none';
+    if (cancel) cancel.style.display = show ? '' : 'none';
 }
 
 function copyResponse() {
@@ -1554,28 +1675,43 @@ function insertResponse() {
     if (!aiState.lastResponse) return;
     const ca = document.getElementById('articleContent');
     if (!ca) return;
-    // ENHANCEMENT: Content is always appended to the end of the textarea, ignoring the
-    //   user's cursor position. A better UX inserts at the caret:
-    //   const start = ca.selectionStart;
-    //   const before = ca.value.slice(0, start);
-    //   const after = ca.value.slice(ca.selectionEnd);
-    //   ca.value = before + (before.trim() ? '\n\n' : '') + aiState.lastResponse + '\n\n' + after;
-    //   ca.selectionStart = ca.selectionEnd = start + aiState.lastResponse.length + 2;
-    ca.value = ca.value + (ca.value ? '\n\n' : '') + aiState.lastResponse;
-    updateStats(); scheduleDraftSave(); showToast('Content inserted', 'success');
+    // Insert at cursor position, not always at the end
+    const start  = ca.selectionStart ?? ca.value.length;
+    const end    = ca.selectionEnd   ?? ca.value.length;
+    const before = ca.value.slice(0, start);
+    const after  = ca.value.slice(end);
+    const pad    = before.trim() ? '\n\n' : '';
+    ca.value = before + pad + aiState.lastResponse + (after.trim() ? '\n\n' : '') + after;
+    ca.selectionStart = ca.selectionEnd = start + pad.length + aiState.lastResponse.length;
+    ca.focus();
+    updateStats(); scheduleDraftSave(); showToast('Content inserted at cursor', 'success');
 }
 
 function replaceResponse() {
     if (!aiState.lastResponse) return;
-    const ca = document.getElementById('articleContent');
-    if (!ca) return;
-    // ENHANCEMENT: confirm() is a blocking browser dialog that looks out of place in the
-    //   polished UI. Replace with a styled in-panel confirmation modal or inline warning
-    //   banner (e.g. show a red "This will erase all existing content" alert with Confirm /
-    //   Cancel buttons) so the experience stays consistent with the rest of the design.
-    if (confirm('Replace all content with AI response?')) {
+    const ca  = document.getElementById('articleContent');
+    const btn = document.getElementById('replaceResponse');
+    if (!ca || !btn) return;
+    // Two-click styled confirmation — no blocking confirm() dialog needed
+    if (btn.dataset.confirming) {
         ca.value = aiState.lastResponse;
+        btn.innerHTML = '<span class="material-icons-round">sync</span>Replace';
+        btn.style.background = '';
+        btn.style.color = '';
+        delete btn.dataset.confirming;
+        clearTimeout(btn._resetTimer);
         updateStats(); scheduleDraftSave(); showToast('Content replaced', 'success');
+    } else {
+        btn.innerHTML = '<span class="material-icons-round">warning</span>Confirm?';
+        btn.style.background = 'rgba(239,68,68,.35)';
+        btn.style.color = '#FCA5A5';
+        btn.dataset.confirming = '1';
+        btn._resetTimer = setTimeout(() => {
+            btn.innerHTML = '<span class="material-icons-round">sync</span>Replace';
+            btn.style.background = '';
+            btn.style.color = '';
+            delete btn.dataset.confirming;
+        }, 3000);
     }
 }
 

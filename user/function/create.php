@@ -830,9 +830,9 @@ select.ps-select.ps-select-primary{border-color:rgba(124,58,237,.4);background:r
 /* ═══ PRINT ═══ */
 @media print{.ai-panel,.ed-topbar,.stats-bar{display:none!important}.editor-pane{overflow:visible}.editor-scroll{padding:0;overflow:visible}}
 </style>
-<!-- Markdown renderer + sanitiser (used by displayResponse) -->
-<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<!-- Markdown renderer + sanitiser — defer so they NEVER block page initialisation -->
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
 

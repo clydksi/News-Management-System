@@ -60,6 +60,15 @@ $departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetchAll(
 // SECURITY: Rate Limiting
 // ============================================
 function checkAIRateLimit($userId) {
+    // ENHANCEMENT: File-based rate limiting has two weaknesses:
+    //   1. Race condition — two simultaneous requests can both pass the check before either
+    //      writes the updated file. Fix: open with LOCK_EX flock() before read/write.
+    //   2. Files live in sys_get_temp_dir() which may be cleared by the OS on restart,
+    //      losing all rate limit state. Consider storing counters in the DB or Redis instead.
+    // ENHANCEMENT: The 50/hour limit is hard-coded. Move it to config.php or system_settings
+    //   so admins can tune it per-role (e.g., editors get 100/hour, writers get 30/hour).
+    // ENHANCEMENT: Rate limiting is per user ID only. A bad actor with multiple accounts can
+    //   bypass it. Add a secondary per-IP limit (store $_SERVER['REMOTE_ADDR'] hash in cache).
     $cacheFile = sys_get_temp_dir() . "/ai_limit_{$userId}.json";
     $requests = file_exists($cacheFile) ? (json_decode(file_get_contents($cacheFile), true) ?: []) : [];
     $currentTime = time();
@@ -75,6 +84,9 @@ function checkAIRateLimit($userId) {
 }
 
 function getAIRateLimitInfo($userId) {
+    // ENHANCEMENT: This function reads and filters the cache file separately from
+    //   checkAIRateLimit(), duplicating logic. Extract a shared helper
+    //   getFilteredRequests($userId) to keep both functions DRY.
     $cacheFile = sys_get_temp_dir() . "/ai_limit_{$userId}.json";
     if (!file_exists($cacheFile)) return ['used' => 0, 'limit' => 50, 'remaining' => 50];
     $requests = json_decode(file_get_contents($cacheFile), true) ?: [];
@@ -146,14 +158,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_attachment']))
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
     header('Content-Type: application/json');
     try {
+        // ENHANCEMENT: No CSRF token is verified here. This endpoint mutates state
+        //   (consumes rate-limit quota, calls paid external APIs) so it should call
+        //   csrf_verify() before anything else, just like the form submission below.
+
         if (!AI_ASSISTANT_ENABLED) throw new Exception('AI Assistant is not configured. Please set up your API keys in config.php');
         checkAIRateLimit($_SESSION['user_id']);
         $provider = $_POST['provider'] ?? DEFAULT_AI_PROVIDER;
         $model = $_POST['model'] ?? null;
+
+        // ENHANCEMENT: $mode is used in conditionals but never validated against an
+        //   allowed list. Add: if (!in_array($mode, ['chat', 'writing'])) throw new Exception('Invalid mode');
         $mode = $_POST['mode'] ?? 'writing';
         $action = $_POST['ai_action'];
         $prompt = trim($_POST['prompt'] ?? '');
+
+        // ENHANCEMENT: No max-length check on $prompt. A user could paste 100,000 characters,
+        //   inflating token usage and cost. Add: if (mb_strlen($prompt) > 4000) throw new Exception('Prompt too long');
         $context = trim($_POST['context'] ?? '');
+
+        // ENHANCEMENT: No max-length check on $context either. The entire article content is
+        //   sent on every single request. Consider capping at ~3000 chars or letting the user
+        //   opt-in to "include article context" with a toggle.
+
+        // ENHANCEMENT: No json_last_error() check after json_decode. If the client sends
+        //   malformed JSON for $options the decode silently returns null, causing type errors.
+        //   Add: if (json_last_error() !== JSON_ERROR_NONE) $options = [];
         $options = json_decode($_POST['options'] ?? '{}', true);
         if (empty($prompt)) throw new Exception('Prompt is required');
         if (!isset(AI_PROVIDERS[$provider])) throw new Exception('Invalid AI provider');
@@ -164,11 +194,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
         $modelConfig = $providerConfig['models'][$model] ?? null;
         if (!$modelConfig) throw new Exception('Invalid model selected');
         if ($mode === 'chat') {
+            // ENHANCEMENT: Chat mode is fully stateless — every message is a fresh single-turn
+            //   request. To support real multi-turn conversation, store the conversation history
+            //   in $_SESSION['ai_chat_history'] (array of {role, content} pairs) and send the
+            //   full array as the messages array to the API. Add a "Clear chat" button in the UI.
             $systemMessage = 'You are an intelligent AI assistant helping journalists and content creators with research, fact-checking, brainstorming, and answering questions.';
             $fullPrompt = $prompt;
             if (!empty($context)) $fullPrompt = "Context from current article:\n{$context}\n\nQuestion: {$prompt}";
         } else {
             $systemMessages = [
+                // ENHANCEMENT: These system prompts are very brief (one sentence each). Richer
+                //   prompts yield significantly better output. For example, 'generate' could specify:
+                //   "Return structured markdown with a headline, lead paragraph, subheadings, and
+                //    a conclusion. Cite sources in-line where relevant." Similarly, 'seo' could
+                //   ask for a meta description, focus keyword suggestions, and heading structure.
+                // ENHANCEMENT: 'fact_check' and 'research' exist as system prompts but are NOT
+                //   in the HTML <select id="aiAction"> options. Either add them to the dropdown
+                //   or remove them here to avoid dead code.
                 'generate' => 'You are a professional content writer. Create engaging, well-structured content.',
                 'improve' => 'You are an expert editor. Improve the text while maintaining its core message.',
                 'summarize' => 'You are a summarization expert. Create concise summaries capturing key points.',
@@ -179,6 +221,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
                 'research' => 'You are a research assistant. Provide detailed, factual information.',
                 'fact_check' => 'You are a fact-checking expert. Analyze and verify claims.'
             ];
+            // ENHANCEMENT: Unknown $action silently falls back to 'generate' with no logging.
+            //   Log a warning when this happens so you know if an invalid action is being sent:
+            //   if (!isset($systemMessages[$action])) error_log("Unknown AI action: $action");
             $systemMessage = $systemMessages[$action] ?? $systemMessages['generate'];
             $toneModifiers = ['professional' => ' Write in a professional, formal tone.', 'casual' => ' Write in a casual, conversational tone.', 'journalistic' => ' Write in a journalistic, objective news style.'];
             $lengthConstraints = ['brief' => ' Keep under 200 words.', 'medium' => ' Aim for 400-600 words.', 'long' => ' Provide 800-1200 words.'];
@@ -198,6 +243,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
         }
         $aiResponse = $result['response'];
         if (empty($aiResponse)) throw new Exception('Empty response from AI. Please try again.');
+
+        // ENHANCEMENT: Token usage ($result['usage']) is returned to the client but never
+        //   persisted. Consider logging it to an `ai_usage_log` DB table (user_id, provider,
+        //   model, input_tokens, output_tokens, action, created_at) to track costs over time
+        //   and show admins a usage/cost dashboard.
         echo json_encode(['success' => true, 'response' => $aiResponse, 'provider' => $provider, 'model' => $model, 'mode' => $mode, 'action' => $action, 'word_count' => str_word_count($aiResponse), 'usage' => $result['usage'], 'rate_limit' => getAIRateLimitInfo($_SESSION['user_id'])]);
     } catch (Exception $e) {
         error_log("AI Generation Error: " . $e->getMessage());
@@ -207,6 +257,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
 }
 
 function callAnthropicAPI($apiKey, $model, $systemMessage, $prompt, $maxTokens, $mode) {
+    // ENHANCEMENT: The three API call functions (Anthropic / OpenAI / Google) share the same
+    //   curl boilerplate. Extract a shared callCurl($url, $headers, $body) helper to keep them DRY.
+
+    // ENHANCEMENT: `anthropic-version: 2023-06-01` is the oldest supported version header.
+    //   Update to a newer date (e.g. 2024-01-01) to access newer API features and avoid
+    //   eventual deprecation.
+
+    // ENHANCEMENT: temperature 1.0 for writing mode is the maximum and can produce incoherent
+    //   output for structured tasks like grammar fixing or SEO. Use 0.7–0.9 for writing
+    //   and reserve 1.0 only for brainstorming/creative actions.
+
+    // ENHANCEMENT: No streaming support. For 'long' generation the user stares at a spinner
+    //   for 10–30 seconds. Implement Server-Sent Events (SSE) on this endpoint and use
+    //   ReadableStream on the JS side to stream tokens in real time as they arrive.
+
+    // ENHANCEMENT: No retry logic for transient failures (network blip, provider 503).
+    //   Wrap the curl call in a small retry loop (max 2 retries, 1s delay) for 5xx errors.
+
     $ch = curl_init('https://api.anthropic.com/v1/messages');
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json','x-api-key: ' . $apiKey,'anthropic-version: 2023-06-01'], CURLOPT_POSTFIELDS => json_encode(['model' => $model,'max_tokens' => $maxTokens,'system' => $systemMessage,'messages' => [['role' => 'user','content' => $prompt]],'temperature' => $mode === 'chat' ? 0.7 : 1.0]), CURLOPT_TIMEOUT => 60]);
     $response = curl_exec($ch); $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); $curlError = curl_error($ch); curl_close($ch);
@@ -217,6 +285,9 @@ function callAnthropicAPI($apiKey, $model, $systemMessage, $prompt, $maxTokens, 
 }
 
 function callOpenAIAPI($apiKey, $model, $systemMessage, $prompt, $maxTokens) {
+    // ENHANCEMENT: OpenAI's newer models (gpt-4o, gpt-4-turbo) use `max_completion_tokens`
+    //   instead of `max_tokens`. The old parameter still works but may be deprecated.
+    //   Check the model name and switch the field accordingly.
     $ch = curl_init('https://api.openai.com/v1/chat/completions');
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json','Authorization: Bearer ' . $apiKey], CURLOPT_POSTFIELDS => json_encode(['model' => $model,'messages' => [['role' => 'system','content' => $systemMessage],['role' => 'user','content' => $prompt]],'max_tokens' => $maxTokens,'temperature' => 0.7]), CURLOPT_TIMEOUT => 60]);
     $response = curl_exec($ch); $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); $curlError = curl_error($ch); curl_close($ch);
@@ -227,6 +298,11 @@ function callOpenAIAPI($apiKey, $model, $systemMessage, $prompt, $maxTokens) {
 }
 
 function callGoogleGeminiAPI($apiKey, $model, $systemMessage, $prompt, $maxTokens) {
+    // ENHANCEMENT: The system message is concatenated into the user prompt text
+    //   ($systemMessage . "\n\n" . $prompt). Gemini 1.5+ has a proper `system_instruction`
+    //   top-level field — use it instead for cleaner role separation:
+    //   'system_instruction' => ['parts' => [['text' => $systemMessage]]]
+    //   and keep 'contents' for the user turn only.
     $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
     $ch = curl_init($url);
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json'], CURLOPT_POSTFIELDS => json_encode(['contents' => [['parts' => [['text' => $systemMessage . "\n\n" . $prompt]]]],'generationConfig' => ['maxOutputTokens' => $maxTokens,'temperature' => 0.7]]), CURLOPT_TIMEOUT => 60]);
@@ -1133,9 +1209,18 @@ const aiState = {
     lastResponse: '',
     isGenerating: false,
     attachments: [],
+    // ENHANCEMENT: history[] is kept in memory only (max 10 entries) and is lost on page
+    //   reload or navigation. Persist it to localStorage so users can review past generations
+    //   within the same session. Add a "History" button in the panel to browse and re-insert
+    //   previous responses.
     history: [],
     draftTimer: null,
+    // ENHANCEMENT: csrfToken reads $_SESSION['csrf_token'] directly (same PHP 8 undefined-key
+    //   issue fixed in login.php). Change to: csrfToken: '<?= htmlspecialchars(csrf_token()) ?>',
     csrfToken: '<?= $_SESSION['csrf_token'] ?>',
+    // ENHANCEMENT: panelCollapsed state is lost on page reload. Persist to localStorage
+    //   (e.g. localStorage.setItem('ai_panel_collapsed', aiState.panelCollapsed)) and
+    //   restore it in initDarkMode/init so the panel remembers its state across sessions.
     panelCollapsed: false
 };
 
@@ -1353,8 +1438,16 @@ async function handleGenerate() {
     const length = mode === 'writing' ? document.getElementById('aiLength').value : '';
     const title = document.getElementById('articleTitle')?.value || '';
     const content = document.getElementById('articleContent')?.value || '';
+    // ENHANCEMENT: The full article content is sent as context on every request regardless
+    //   of whether the user needs it. For long articles this wastes tokens and increases cost.
+    //   Add an "Include article context" toggle checkbox in the panel and only append context
+    //   when it is checked. Alternatively, send only the first ~500 words as context.
     const context = [title, content].filter(Boolean).join('\n\n');
 
+    // ENHANCEMENT: No AbortController is set up. If the user navigates away or clicks
+    //   another action while generating, the previous fetch has no way to be cancelled.
+    //   Store an AbortController in aiState.controller, pass its signal to fetch(), and
+    //   add a "Cancel" button that calls aiState.controller.abort().
     aiState.isGenerating = true;
     showLoading(true);
 
@@ -1382,6 +1475,13 @@ async function handleGenerate() {
             displayResponse(data.response, data.word_count, data.provider, data.model);
             showToast((mode === 'chat' ? 'Answer from ' : 'Generated by ') + AI_CONFIG.providers[data.provider]?.name, 'success');
             if (data.rate_limit) updateRateLimitUI(data.rate_limit);
+
+            // ENHANCEMENT: After a successful generation the prompt textarea is NOT cleared.
+            //   Users must manually delete their prompt before typing the next one, which is
+            //   friction. Clear the prompt after success (or offer a "Clear & ask again" link).
+
+            // ENHANCEMENT: Add a "Regenerate" button in the response box that replays the
+            //   same prompt+settings so users can get a different variation without retyping.
         }
     } catch (err) {
         console.error('AI Error:', err);
@@ -1411,12 +1511,21 @@ function displayResponse(response, wordCount, provider, model) {
     const content = document.getElementById('aiResponseContent');
     const wc = document.getElementById('aiWordCount');
     const pb = document.getElementById('providerBadge');
+    // ENHANCEMENT: content.textContent = response renders everything as plain text.
+    //   AI responses often contain Markdown (# headings, **bold**, - lists, ```code blocks```).
+    //   Render Markdown instead of raw text — either include a lightweight library like
+    //   marked.js (cdn.jsdelivr.net/npm/marked) or write a minimal regex converter.
+    //   Use content.innerHTML = marked.parse(response) after sanitising with DOMPurify
+    //   to prevent XSS: content.innerHTML = DOMPurify.sanitize(marked.parse(response)).
     if (content) content.textContent = response;
     if (wc) wc.textContent = wordCount ? wordCount + ' words' : '';
     if (pb) {
         const pc = AI_CONFIG.providers[provider];
         pb.textContent = pc ? pc.icon + ' ' + pc.name : provider;
     }
+    // ENHANCEMENT: Only one response is visible at a time — the new one replaces the previous.
+    //   Consider showing the last 3 responses in tabs or an accordion so users can compare
+    //   different generations side by side before deciding which to insert.
     if (box) { box.style.display = ''; box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 }
 
@@ -1445,6 +1554,13 @@ function insertResponse() {
     if (!aiState.lastResponse) return;
     const ca = document.getElementById('articleContent');
     if (!ca) return;
+    // ENHANCEMENT: Content is always appended to the end of the textarea, ignoring the
+    //   user's cursor position. A better UX inserts at the caret:
+    //   const start = ca.selectionStart;
+    //   const before = ca.value.slice(0, start);
+    //   const after = ca.value.slice(ca.selectionEnd);
+    //   ca.value = before + (before.trim() ? '\n\n' : '') + aiState.lastResponse + '\n\n' + after;
+    //   ca.selectionStart = ca.selectionEnd = start + aiState.lastResponse.length + 2;
     ca.value = ca.value + (ca.value ? '\n\n' : '') + aiState.lastResponse;
     updateStats(); scheduleDraftSave(); showToast('Content inserted', 'success');
 }
@@ -1453,6 +1569,10 @@ function replaceResponse() {
     if (!aiState.lastResponse) return;
     const ca = document.getElementById('articleContent');
     if (!ca) return;
+    // ENHANCEMENT: confirm() is a blocking browser dialog that looks out of place in the
+    //   polished UI. Replace with a styled in-panel confirmation modal or inline warning
+    //   banner (e.g. show a red "This will erase all existing content" alert with Confirm /
+    //   Cancel buttons) so the experience stays consistent with the rest of the design.
     if (confirm('Replace all content with AI response?')) {
         ca.value = aiState.lastResponse;
         updateStats(); scheduleDraftSave(); showToast('Content replaced', 'success');

@@ -158,11 +158,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_attachment']))
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ai_action'])) {
     header('Content-Type: application/json');
     try {
-        // CSRF guard — protects paid API quota from cross-site abuse
-        if (!csrf_verify()) {
-            echo json_encode(['error' => 'Invalid security token. Please refresh the page.']);
-            exit;
-        }
+        // CSRF is already validated for all POST requests by the catch-all check above (lines 21-26).
+        // csrf_verify() returns void so !csrf_verify() is always true — do NOT use it in an if().
 
         if (!AI_ASSISTANT_ENABLED) throw new Exception('AI Assistant is not configured. Please set up your API keys in config.php');
         checkAIRateLimit($_SESSION['user_id']);
